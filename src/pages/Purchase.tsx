@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Package, AlertTriangle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Package, AlertTriangle, DollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,52 +7,161 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-// Dummy data for recent purchases
-const recentPurchases = [
-  {
-    id: "PUR001",
-    billNo: "BILL/2024/001",
-    date: "2024-01-15",
-    vendor: "Ram Provisions Store",
-    phone: "+91 9876543210",
-    items: [
-      { name: "Rice", quantity: 100, unit: "kg", damaged: 2 },
-      { name: "Dal", quantity: 50, unit: "kg", damaged: 0 }
-    ],
-    total: 8500
-  },
-  {
-    id: "PUR002",
-    billNo: "BILL/2024/002", 
-    date: "2024-01-14",
-    vendor: "Shyam Grocery",
-    phone: "+91 9876543211",
-    items: [
-      { name: "Oil", quantity: 20, unit: "litres", damaged: 0.5 },
-      { name: "Vegetables", quantity: 75, unit: "kg", damaged: 5 }
-    ],
-    total: 3200
-  }
-];
+interface Vendor {
+  id: string;
+  name: string;
+  contact_person: string;
+  phone: string;
+  is_active: boolean;
+}
+
+interface Item {
+  id: string;
+  name: string;
+  unit: string;
+  rate_per_unit: number;
+}
+
+interface Purchase {
+  id: string;
+  bill_no: string;
+  vendor_id: string;
+  vendor_name: string;
+  purchase_date: string;
+  total_amount: number;
+  items: Array<{
+    item_name: string;
+    quantity: number;
+    rate_per_unit: number;
+    total_price: number;
+    damaged_quantity: number;
+    mrp: number;
+    discount_value: number;
+    discount_type: string;
+  }>;
+}
 
 const unitOptions = ["kg", "litres", "pieces"];
 
 export default function Purchase() {
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [recentPurchases, setRecentPurchases] = useState<Purchase[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const [formData, setFormData] = useState({
     billNo: "",
-    date: "",
-    vendorName: "",
-    vendorPhone: "",
-    items: [{ name: "", quantity: "", unit: "kg", damaged: "" }]
+    date: new Date().toISOString().split('T')[0],
+    vendorId: "",
+    items: [{ 
+      itemId: "", 
+      name: "", 
+      quantity: "", 
+      unit: "kg", 
+      rate: "", 
+      mrp: "", 
+      discount: "", 
+      discountType: "percentage", 
+      damaged: "" 
+    }]
   });
   
   const { toast } = useToast();
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch vendors
+      const { data: vendorsData, error: vendorsError } = await supabase
+        .from('vendors')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (vendorsError) throw vendorsError;
+
+      // Fetch items
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('items')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (itemsError) throw itemsError;
+
+      // Fetch recent purchases
+      const { data: purchasesData, error: purchasesError } = await supabase
+        .from('purchases')
+        .select(`
+          *,
+          vendors(name),
+          purchase_items(
+            *,
+            items(name)
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (purchasesError) throw purchasesError;
+
+      setVendors(vendorsData || []);
+      setItems(itemsData || []);
+      
+      // Transform purchases data
+      const transformedPurchases = purchasesData?.map(purchase => ({
+        id: purchase.id,
+        bill_no: purchase.bill_no,
+        vendor_id: purchase.vendor_id,
+        vendor_name: purchase.vendors?.name || 'Unknown',
+        purchase_date: new Date(purchase.purchase_date).toLocaleDateString('en-IN'),
+        total_amount: purchase.total_amount,
+        items: purchase.purchase_items?.map((item: any) => ({
+          item_name: item.items?.name || 'Unknown',
+          quantity: item.quantity,
+          rate_per_unit: item.rate_per_unit,
+          total_price: item.total_price,
+          damaged_quantity: item.damaged_quantity,
+          mrp: item.mrp,
+          discount_value: item.discount_value,
+          discount_type: item.discount_type
+        })) || []
+      })) || [];
+
+      setRecentPurchases(transformedPurchases);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch data from database",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const addItem = () => {
     setFormData(prev => ({
       ...prev,
-      items: [...prev.items, { name: "", quantity: "", unit: "kg", damaged: "" }]
+      items: [...prev.items, { 
+        itemId: "", 
+        name: "", 
+        quantity: "", 
+        unit: "kg", 
+        rate: "", 
+        mrp: "", 
+        discount: "", 
+        discountType: "percentage", 
+        damaged: "" 
+      }]
     }));
   };
 
@@ -72,28 +181,157 @@ export default function Purchase() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Purchase Recorded",
-      description: `Bill ${formData.billNo} has been successfully recorded.`,
-    });
-    // Reset form
-    setFormData({
-      billNo: "",
-      date: "",
-      vendorName: "",
-      vendorPhone: "",
-      items: [{ name: "", quantity: "", unit: "kg", damaged: "" }]
-    });
+  const calculateItemTotal = (item: any) => {
+    const quantity = parseFloat(item.quantity) || 0;
+    const rate = parseFloat(item.rate) || 0;
+    const discount = parseFloat(item.discount) || 0;
+    
+    let total = quantity * rate;
+    if (item.discountType === 'percentage') {
+      total = total * (1 - discount / 100);
+    } else {
+      total = total - discount;
+    }
+    
+    return total;
   };
+
+  const getTotalAmount = () => {
+    return formData.items.reduce((sum, item) => sum + calculateItemTotal(item), 0);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.billNo || !formData.vendorId || formData.items.some(item => !item.itemId || !item.quantity || !item.rate)) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const totalAmount = getTotalAmount();
+
+      // Insert purchase record
+      const { data: purchaseRecord, error: purchaseError } = await supabase
+        .from('purchases')
+        .insert({
+          bill_no: formData.billNo,
+          vendor_id: formData.vendorId,
+          purchase_date: formData.date,
+          total_amount: totalAmount
+        })
+        .select()
+        .single();
+
+      if (purchaseError) throw purchaseError;
+
+      // Insert purchase items and update stock
+      for (const item of formData.items) {
+        const quantity = parseFloat(item.quantity) || 0;
+        const rate = parseFloat(item.rate) || 0;
+        const discount = parseFloat(item.discount) || 0;
+        const damaged = parseFloat(item.damaged) || 0;
+        const itemTotal = calculateItemTotal(item);
+
+        // Insert purchase item
+        const { error: itemError } = await supabase
+          .from('purchase_items')
+          .insert({
+            purchase_id: purchaseRecord.id,
+            item_id: item.itemId,
+            quantity: quantity,
+            mrp: parseFloat(item.mrp) || null,
+            discount_type: item.discountType,
+            discount_value: discount,
+            rate_per_unit: rate,
+            total_price: itemTotal,
+            damaged_quantity: damaged
+          });
+
+        if (itemError) throw itemError;
+
+        // Update item stock (add quantity minus damaged)
+        const effectiveQuantity = quantity - damaged;
+        
+        // Update stock and rate
+        const { data: currentItem } = await supabase
+          .from('items')
+          .select('current_stock')
+          .eq('id', item.itemId)
+          .single();
+
+        if (currentItem) {
+          const { error: stockError } = await supabase
+            .from('items')
+            .update({
+              current_stock: currentItem.current_stock + effectiveQuantity,
+              rate_per_unit: rate
+            })
+            .eq('id', item.itemId);
+
+          if (stockError) throw stockError;
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: `Purchase recorded successfully. Stock updated.`,
+      });
+
+      // Reset form and refresh data
+      setFormData({
+        billNo: "",
+        date: new Date().toISOString().split('T')[0],
+        vendorId: "",
+        items: [{ 
+          itemId: "", 
+          name: "", 
+          quantity: "", 
+          unit: "kg", 
+          rate: "", 
+          mrp: "", 
+          discount: "", 
+          discountType: "percentage", 
+          damaged: "" 
+        }]
+      });
+
+      fetchData();
+    } catch (error) {
+      console.error('Error recording purchase:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record purchase",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading && vendors.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading purchase data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Purchase Management</h1>
-          <p className="text-muted-foreground">Record provisions received and track inventory</p>
+          <p className="text-muted-foreground">Record provisions received with vendor details and pricing</p>
         </div>
       </div>
 
@@ -112,7 +350,7 @@ export default function Purchase() {
                 {/* Bill Details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="billNo">Bill Number</Label>
+                    <Label htmlFor="billNo">Bill Number *</Label>
                     <Input
                       id="billNo"
                       value={formData.billNo}
@@ -122,39 +360,35 @@ export default function Purchase() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="date">Date</Label>
+                    <Label htmlFor="date">Date & Time *</Label>
                     <Input
                       id="date"
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                      type="datetime-local"
+                      value={formData.date + 'T' + new Date().toTimeString().slice(0,5)}
+                      onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value.split('T')[0] }))}
                       required
                     />
                   </div>
                 </div>
 
-                {/* Vendor Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="vendorName">Vendor Name</Label>
-                    <Input
-                      id="vendorName"
-                      value={formData.vendorName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, vendorName: e.target.value }))}
-                      placeholder="Enter vendor name"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vendorPhone">Phone Number</Label>
-                    <Input
-                      id="vendorPhone"
-                      value={formData.vendorPhone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, vendorPhone: e.target.value }))}
-                      placeholder="+91 XXXXXXXXXX"
-                      required
-                    />
-                  </div>
+                {/* Vendor Selection */}
+                <div className="space-y-2">
+                  <Label>Vendor Selection *</Label>
+                  <Select 
+                    value={formData.vendorId} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, vendorId: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select registered vendor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vendors.map((vendor) => (
+                        <SelectItem key={vendor.id} value={vendor.id}>
+                          {vendor.name} - {vendor.phone}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Items */}
@@ -169,18 +403,36 @@ export default function Purchase() {
                   
                   {formData.items.map((item, index) => (
                     <Card key={index} className="p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                         <div className="space-y-2">
-                          <Label>Item Name</Label>
-                          <Input
-                            value={item.name}
-                            onChange={(e) => updateItem(index, "name", e.target.value)}
-                            placeholder="Enter item name"
-                            required
-                          />
+                          <Label>Item *</Label>
+                          <Select 
+                            value={item.itemId} 
+                            onValueChange={(value) => {
+                              const selectedItem = items.find(i => i.id === value);
+                              updateItem(index, "itemId", value);
+                              if (selectedItem) {
+                                updateItem(index, "name", selectedItem.name);
+                                updateItem(index, "unit", selectedItem.unit);
+                                updateItem(index, "rate", selectedItem.rate_per_unit.toString());
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select item" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {items.map((availableItem) => (
+                                <SelectItem key={availableItem.id} value={availableItem.id}>
+                                  {availableItem.name} ({availableItem.unit})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
+                        
                         <div className="space-y-2">
-                          <Label>Quantity</Label>
+                          <Label>Quantity *</Label>
                           <Input
                             type="number"
                             value={item.quantity}
@@ -190,22 +442,61 @@ export default function Purchase() {
                             step="0.01"
                             required
                           />
+                          <p className="text-xs text-muted-foreground">{item.unit}</p>
                         </div>
+                        
                         <div className="space-y-2">
-                          <Label>Unit</Label>
-                          <Select value={item.unit} onValueChange={(value) => updateItem(index, "unit", value)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {unitOptions.map((unit) => (
-                                <SelectItem key={unit} value={unit}>
-                                  {unit.charAt(0).toUpperCase() + unit.slice(1)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label>MRP</Label>
+                          <Input
+                            type="number"
+                            value={item.mrp}
+                            onChange={(e) => updateItem(index, "mrp", e.target.value)}
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                          />
                         </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Discount</Label>
+                          <div className="flex gap-1">
+                            <Input
+                              type="number"
+                              value={item.discount}
+                              onChange={(e) => updateItem(index, "discount", e.target.value)}
+                              placeholder="0"
+                              min="0"
+                              step="0.01"
+                              className="flex-1"
+                            />
+                            <Select 
+                              value={item.discountType} 
+                              onValueChange={(value) => updateItem(index, "discountType", value)}
+                            >
+                              <SelectTrigger className="w-16">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="percentage">%</SelectItem>
+                                <SelectItem value="amount">₹</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Rate/Unit *</Label>
+                          <Input
+                            type="number"
+                            value={item.rate}
+                            onChange={(e) => updateItem(index, "rate", e.target.value)}
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                            required
+                          />
+                        </div>
+                        
                         <div className="space-y-2">
                           <Label className="flex items-center gap-1">
                             <AlertTriangle className="h-3 w-3 text-destructive" />
@@ -219,26 +510,42 @@ export default function Purchase() {
                             min="0"
                             step="0.01"
                           />
-                        </div>
-                        <div className="flex items-end">
                           {formData.items.length > 1 && (
                             <Button
                               type="button"
                               variant="destructive"
                               size="sm"
                               onClick={() => removeItem(index)}
+                              className="w-full mt-2"
                             >
                               Remove
                             </Button>
                           )}
                         </div>
                       </div>
+                      
+                      {item.quantity && item.rate && (
+                        <div className="mt-3 p-2 bg-muted/50 rounded text-sm">
+                          <div className="flex justify-between">
+                            <span>Item Total:</span>
+                            <span className="font-medium">₹{calculateItemTotal(item).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
                     </Card>
                   ))}
                 </div>
 
-                <Button type="submit" className="w-full">
-                  Record Purchase
+                {/* Total Amount */}
+                <div className="p-4 bg-primary/10 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold">Total Amount:</span>
+                    <span className="text-2xl font-bold text-primary">₹{getTotalAmount().toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Recording..." : "Record Purchase"}
                 </Button>
               </form>
             </CardContent>
@@ -259,27 +566,21 @@ export default function Purchase() {
                 <div key={purchase.id} className="p-4 bg-muted/50 rounded-lg space-y-3">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-semibold text-sm">{purchase.billNo}</p>
-                      <p className="text-xs text-muted-foreground">{purchase.date}</p>
+                      <p className="font-semibold text-sm">{purchase.bill_no}</p>
+                      <p className="text-xs text-muted-foreground">{purchase.purchase_date}</p>
+                      <p className="text-xs text-muted-foreground">{purchase.vendor_name}</p>
                     </div>
-                    <Badge variant="secondary">₹{purchase.total}</Badge>
-                  </div>
-                  
-                  <div>
-                    <p className="text-sm font-medium">{purchase.vendor}</p>
-                    <p className="text-xs text-muted-foreground">{purchase.phone}</p>
+                    <Badge variant="outline">₹{purchase.total_amount.toFixed(2)}</Badge>
                   </div>
                   
                   <div className="space-y-1">
                     {purchase.items.map((item, index) => (
                       <div key={index} className="flex justify-between items-center text-xs">
-                        <span>{item.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span>{item.quantity} {item.unit}</span>
-                          {item.damaged > 0 && (
-                            <Badge variant="destructive" className="text-[10px] px-1 py-0">
-                              -{item.damaged}
-                            </Badge>
+                        <span>{item.item_name} - {item.quantity}</span>
+                        <div className="text-right">
+                          <span className="font-medium">₹{item.total_price.toFixed(2)}</span>
+                          {item.damaged_quantity > 0 && (
+                            <div className="text-destructive">Damaged: {item.damaged_quantity}</div>
                           )}
                         </div>
                       </div>
@@ -287,6 +588,13 @@ export default function Purchase() {
                   </div>
                 </div>
               ))}
+              
+              {recentPurchases.length === 0 && (
+                <div className="text-center py-8">
+                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">No recent purchases found</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

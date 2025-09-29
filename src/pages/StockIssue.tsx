@@ -47,8 +47,8 @@ const recentIssues = [
 export default function StockIssue() {
   const [issueData, setIssueData] = useState({
     date: new Date().toISOString().split('T')[0],
-    classCategory: "",
-    items: [{ name: "", quantity: "", unit: "kg" }]
+    issueType: "Master",
+    items: [{ name: "", quantity: "", unit: "kg", price: "" }]
   });
 
   const { toast } = useToast();
@@ -124,20 +124,17 @@ export default function StockIssue() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Class Category</Label>
+                    <Label>Issue Type</Label>
                     <Select 
-                      value={issueData.classCategory} 
-                      onValueChange={(value) => setIssueData(prev => ({ ...prev, classCategory: value }))}
+                      value={issueData.issueType} 
+                      onValueChange={(value) => setIssueData(prev => ({ ...prev, issueType: value }))}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select class category" />
+                        <SelectValue placeholder="Select issue type" />
                       </SelectTrigger>
                       <SelectContent>
-                        {classCategories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="Master">Master</SelectItem>
+                        <SelectItem value="Handloan">Handloan</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
