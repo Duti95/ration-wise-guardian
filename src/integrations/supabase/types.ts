@@ -14,7 +14,341 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      government_diet_menu: {
+        Row: {
+          created_at: string
+          id: string
+          items: Json
+          meal_type: string
+          menu_date: string
+          week_number: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          items: Json
+          meal_type: string
+          menu_date: string
+          week_number?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          items?: Json
+          meal_type?: string
+          menu_date?: string
+          week_number?: number | null
+        }
+        Relationships: []
+      }
+      items: {
+        Row: {
+          created_at: string
+          current_stock: number | null
+          danger_threshold: number | null
+          id: string
+          is_active: boolean | null
+          medium_threshold: number | null
+          name: string
+          rate_per_unit: number | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_stock?: number | null
+          danger_threshold?: number | null
+          id?: string
+          is_active?: boolean | null
+          medium_threshold?: number | null
+          name: string
+          rate_per_unit?: number | null
+          unit: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_stock?: number | null
+          danger_threshold?: number | null
+          id?: string
+          is_active?: boolean | null
+          medium_threshold?: number | null
+          name?: string
+          rate_per_unit?: number | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      purchase_items: {
+        Row: {
+          created_at: string
+          damaged_quantity: number | null
+          discount_type: string | null
+          discount_value: number | null
+          id: string
+          item_id: string | null
+          mrp: number | null
+          purchase_id: string | null
+          quantity: number
+          rate_per_unit: number
+          total_price: number
+        }
+        Insert: {
+          created_at?: string
+          damaged_quantity?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
+          id?: string
+          item_id?: string | null
+          mrp?: number | null
+          purchase_id?: string | null
+          quantity: number
+          rate_per_unit: number
+          total_price: number
+        }
+        Update: {
+          created_at?: string
+          damaged_quantity?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
+          id?: string
+          item_id?: string | null
+          mrp?: number | null
+          purchase_id?: string | null
+          quantity?: number
+          rate_per_unit?: number
+          total_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchases: {
+        Row: {
+          bill_no: string
+          created_at: string
+          id: string
+          purchase_date: string
+          total_amount: number | null
+          updated_at: string
+          vendor_id: string | null
+        }
+        Insert: {
+          bill_no: string
+          created_at?: string
+          id?: string
+          purchase_date?: string
+          total_amount?: number | null
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Update: {
+          bill_no?: string
+          created_at?: string
+          id?: string
+          purchase_date?: string
+          total_amount?: number | null
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_issue_items: {
+        Row: {
+          created_at: string
+          id: string
+          issue_id: string | null
+          item_id: string | null
+          quantity: number
+          rate_per_unit: number
+          total_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          issue_id?: string | null
+          item_id?: string | null
+          quantity: number
+          rate_per_unit: number
+          total_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          issue_id?: string | null
+          item_id?: string | null
+          quantity?: number
+          rate_per_unit?: number
+          total_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_issue_items_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "stock_issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issue_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_issues: {
+        Row: {
+          created_at: string
+          id: string
+          issue_date: string
+          issue_type: string | null
+          total_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          issue_date?: string
+          issue_type?: string | null
+          total_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          issue_date?: string
+          issue_type?: string | null
+          total_value?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      strength_categories: {
+        Row: {
+          assigned_amount: number | null
+          category_name: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          student_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_amount?: number | null
+          category_name: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          student_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_amount?: number | null
+          category_name?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          student_count?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      utensils: {
+        Row: {
+          capacity: string | null
+          created_at: string
+          current_quantity: number | null
+          damaged_quantity: number | null
+          id: string
+          name: string
+          replacement_needed: number | null
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          capacity?: string | null
+          created_at?: string
+          current_quantity?: number | null
+          damaged_quantity?: number | null
+          id?: string
+          name: string
+          replacement_needed?: number | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          capacity?: string | null
+          created_at?: string
+          current_quantity?: number | null
+          damaged_quantity?: number | null
+          id?: string
+          name?: string
+          replacement_needed?: number | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vendors: {
+        Row: {
+          address: string | null
+          contact_person: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
