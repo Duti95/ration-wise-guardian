@@ -309,7 +309,7 @@ export default function Dashboard() {
               {strengthCategories.map((category) => (
                 <div key={category.id} className="p-4 bg-card border rounded-lg">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-sm">{category.category_name}</h4>
+                    <h4 className="font-semibold text-sm">Cat 1(5,6,7)</h4>
                     {editingCategory !== category.id && (
                       <Button variant="ghost" size="sm" onClick={() => handleEdit(category)}>
                         <Edit className="h-4 w-4" />
