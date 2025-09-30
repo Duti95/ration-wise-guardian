@@ -402,10 +402,25 @@ export default function Purchase() {
                   </div>
                   
                   {formData.items.map((item, index) => (
-                    <Card key={index} className="p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                        <div className="space-y-2">
-                          <Label>Item *</Label>
+                    <Card key={index} className="p-6 border-2">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-semibold text-base">Item #{index + 1}</h3>
+                        {formData.items.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => removeItem(index)}
+                          >
+                            Remove Item
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Row 1: Item Selection and Quantity */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="space-y-2 md:col-span-2">
+                          <Label className="text-sm font-medium">Item Name *</Label>
                           <Select 
                             value={item.itemId} 
                             onValueChange={(value) => {
@@ -418,8 +433,8 @@ export default function Purchase() {
                               }
                             }}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select item" />
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder="Select item from inventory" />
                             </SelectTrigger>
                             <SelectContent>
                               {items.map((availableItem) => (
@@ -432,34 +447,63 @@ export default function Purchase() {
                         </div>
                         
                         <div className="space-y-2">
-                          <Label>Quantity *</Label>
-                          <Input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(index, "quantity", e.target.value)}
-                            placeholder="0"
-                            min="0"
-                            step="0.01"
-                            required
-                          />
-                          <p className="text-xs text-muted-foreground">{item.unit}</p>
+                          <Label className="text-sm font-medium">Quantity *</Label>
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                              placeholder="0"
+                              min="0"
+                              step="0.01"
+                              required
+                              className="h-11"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                              {item.unit}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Row 2: Pricing Details */}
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Rate/Unit *</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
+                            <Input
+                              type="number"
+                              value={item.rate}
+                              onChange={(e) => updateItem(index, "rate", e.target.value)}
+                              placeholder="0.00"
+                              min="0"
+                              step="0.01"
+                              required
+                              className="h-11 pl-7"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">MRP</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
+                            <Input
+                              type="number"
+                              value={item.mrp}
+                              onChange={(e) => updateItem(index, "mrp", e.target.value)}
+                              placeholder="0.00"
+                              min="0"
+                              step="0.01"
+                              className="h-11 pl-7"
+                            />
+                          </div>
                         </div>
                         
                         <div className="space-y-2">
-                          <Label>MRP</Label>
-                          <Input
-                            type="number"
-                            value={item.mrp}
-                            onChange={(e) => updateItem(index, "mrp", e.target.value)}
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label>Discount</Label>
-                          <div className="flex gap-1">
+                          <Label className="text-sm font-medium">Discount</Label>
+                          <div className="flex gap-2">
                             <Input
                               type="number"
                               value={item.discount}
@@ -467,13 +511,13 @@ export default function Purchase() {
                               placeholder="0"
                               min="0"
                               step="0.01"
-                              className="flex-1"
+                              className="h-11 flex-1"
                             />
                             <Select 
                               value={item.discountType} 
                               onValueChange={(value) => updateItem(index, "discountType", value)}
                             >
-                              <SelectTrigger className="w-16">
+                              <SelectTrigger className="w-20 h-11">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -483,22 +527,9 @@ export default function Purchase() {
                             </Select>
                           </div>
                         </div>
-                        
+
                         <div className="space-y-2">
-                          <Label>Rate/Unit *</Label>
-                          <Input
-                            type="number"
-                            value={item.rate}
-                            onChange={(e) => updateItem(index, "rate", e.target.value)}
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
-                            required
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label className="flex items-center gap-1">
+                          <Label className="text-sm font-medium flex items-center gap-1">
                             <AlertTriangle className="h-3 w-3 text-destructive" />
                             Damaged
                           </Label>
@@ -509,29 +540,22 @@ export default function Purchase() {
                             placeholder="0"
                             min="0"
                             step="0.01"
+                            className="h-11"
                           />
-                          {formData.items.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => removeItem(index)}
-                              className="w-full mt-2"
-                            >
-                              Remove
-                            </Button>
-                          )}
                         </div>
-                      </div>
-                      
-                      {item.quantity && item.rate && (
-                        <div className="mt-3 p-2 bg-muted/50 rounded text-sm">
-                          <div className="flex justify-between">
-                            <span>Item Total:</span>
-                            <span className="font-medium">₹{calculateItemTotal(item).toFixed(2)}</span>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium flex items-center gap-1">
+                            <DollarSign className="h-3 w-3 text-primary" />
+                            Item Total
+                          </Label>
+                          <div className="h-11 flex items-center justify-center bg-primary/10 border-2 border-primary/20 rounded-md">
+                            <span className="text-lg font-bold text-primary">
+                              ₹{item.quantity && item.rate ? calculateItemTotal(item).toFixed(2) : '0.00'}
+                            </span>
                           </div>
                         </div>
-                      )}
+                      </div>
                     </Card>
                   ))}
                 </div>
