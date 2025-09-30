@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import treisLogo from "@/assets/treis-logo.png";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -42,7 +43,7 @@ export default function Layout() {
         </Button>
         
         <div className="flex items-center space-x-4 ml-4 lg:ml-0">
-          <Utensils className="h-8 w-8 text-primary-foreground" />
+          <img src={treisLogo} alt="TREIS Logo" className="h-12 w-12" />
           <div>
             <h1 className="text-xl font-bold text-primary-foreground">
               TREIS Hostel Management Software
