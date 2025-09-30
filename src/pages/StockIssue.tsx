@@ -56,7 +56,7 @@ export default function StockIssue() {
   const addItem = () => {
     setIssueData(prev => ({
       ...prev,
-      items: [...prev.items, { name: "", quantity: "", unit: "kg" }]
+      items: [...prev.items, { name: "", quantity: "", unit: "kg", price: "" }]
     }));
   };
 
@@ -80,13 +80,13 @@ export default function StockIssue() {
     e.preventDefault();
     toast({
       title: "Stock Issued",
-      description: `Items issued successfully for ${issueData.classCategory}`,
+      description: `Items issued successfully as ${issueData.issueType}`,
     });
     // Reset form
     setIssueData({
       date: new Date().toISOString().split('T')[0],
-      classCategory: "",
-      items: [{ name: "", quantity: "", unit: "kg" }]
+      issueType: "Master",
+      items: [{ name: "", quantity: "", unit: "kg", price: "" }]
     });
   };
 
@@ -214,7 +214,7 @@ export default function StockIssue() {
                   ))}
                 </div>
 
-                <Button type="submit" className="w-full" disabled={!issueData.classCategory}>
+                <Button type="submit" className="w-full">
                   Issue Stock
                 </Button>
               </form>
