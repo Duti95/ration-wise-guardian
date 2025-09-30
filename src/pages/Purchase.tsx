@@ -402,9 +402,9 @@ export default function Purchase() {
                   </div>
                   
                   {formData.items.map((item, index) => (
-                    <Card key={index} className="p-6 border-2">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-semibold text-base">Item #{index + 1}</h3>
+                    <Card key={index} className="p-4 border-2">
+                      <div className="flex justify-between items-center mb-3">
+                        <h3 className="font-semibold text-sm">Item #{index + 1}</h3>
                         {formData.items.length > 1 && (
                           <Button
                             type="button"
@@ -418,9 +418,9 @@ export default function Purchase() {
                       </div>
 
                       {/* Row 1: Item Selection and Quantity */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div className="space-y-2 md:col-span-2">
-                          <Label className="text-sm font-medium">Item Name *</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                        <div className="space-y-1.5 md:col-span-2">
+                          <Label className="text-xs font-medium">Item Name *</Label>
                           <Select 
                             value={item.itemId} 
                             onValueChange={(value) => {
@@ -433,7 +433,7 @@ export default function Purchase() {
                               }
                             }}
                           >
-                            <SelectTrigger className="h-11">
+                            <SelectTrigger className="h-9">
                               <SelectValue placeholder="Select item from inventory" />
                             </SelectTrigger>
                             <SelectContent>
@@ -446,8 +446,8 @@ export default function Purchase() {
                           </Select>
                         </div>
                         
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Quantity *</Label>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-medium">Quantity *</Label>
                           <div className="relative">
                             <Input
                               type="number"
@@ -457,21 +457,21 @@ export default function Purchase() {
                               min="0"
                               step="0.01"
                               required
-                              className="h-11"
+                              className="h-9 pr-12"
                             />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                               {item.unit}
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Row 2: Pricing Details */}
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Rate/Unit *</Label>
+                      {/* Row 2: Pricing Details - First Row */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-medium">Rate/Unit *</Label>
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">₹</span>
                             <Input
                               type="number"
                               value={item.rate}
@@ -480,15 +480,15 @@ export default function Purchase() {
                               min="0"
                               step="0.01"
                               required
-                              className="h-11 pl-7"
+                              className="h-9 pl-6"
                             />
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">MRP</Label>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-medium">MRP</Label>
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">₹</span>
                             <Input
                               type="number"
                               value={item.mrp}
@@ -496,42 +496,47 @@ export default function Purchase() {
                               placeholder="0.00"
                               min="0"
                               step="0.01"
-                              className="h-11 pl-7"
+                              className="h-9 pl-6"
                             />
                           </div>
                         </div>
                         
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Discount</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              type="number"
-                              value={item.discount}
-                              onChange={(e) => updateItem(index, "discount", e.target.value)}
-                              placeholder="0"
-                              min="0"
-                              step="0.01"
-                              className="h-11 flex-1"
-                            />
-                            <Select 
-                              value={item.discountType} 
-                              onValueChange={(value) => updateItem(index, "discountType", value)}
-                            >
-                              <SelectTrigger className="w-20 h-11">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="percentage">%</SelectItem>
-                                <SelectItem value="amount">₹</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-medium">Discount Value</Label>
+                          <Input
+                            type="number"
+                            value={item.discount}
+                            onChange={(e) => updateItem(index, "discount", e.target.value)}
+                            placeholder="0"
+                            min="0"
+                            step="0.01"
+                            className="h-9"
+                          />
                         </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium flex items-center gap-1">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-medium">Discount Type</Label>
+                          <Select 
+                            value={item.discountType} 
+                            onValueChange={(value) => updateItem(index, "discountType", value)}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="percentage">Percentage (%)</SelectItem>
+                              <SelectItem value="amount">Amount (₹)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Row 3: Additional Details */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-medium flex items-center gap-1">
                             <AlertTriangle className="h-3 w-3 text-destructive" />
-                            Damaged
+                            Damaged Qty
                           </Label>
                           <Input
                             type="number"
@@ -540,17 +545,17 @@ export default function Purchase() {
                             placeholder="0"
                             min="0"
                             step="0.01"
-                            className="h-11"
+                            className="h-9"
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium flex items-center gap-1">
+                        <div className="space-y-1.5 md:col-span-3">
+                          <Label className="text-xs font-medium flex items-center gap-1">
                             <DollarSign className="h-3 w-3 text-primary" />
-                            Item Total
+                            Item Total Price
                           </Label>
-                          <div className="h-11 flex items-center justify-center bg-primary/10 border-2 border-primary/20 rounded-md">
-                            <span className="text-lg font-bold text-primary">
+                          <div className="h-9 flex items-center justify-center bg-primary/10 border-2 border-primary/20 rounded-md px-3">
+                            <span className="text-base font-bold text-primary">
                               ₹{item.quantity && item.rate ? calculateItemTotal(item).toFixed(2) : '0.00'}
                             </span>
                           </div>
