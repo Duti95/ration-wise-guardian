@@ -7,6 +7,7 @@ import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Purchase from "./pages/Purchase";
 import StockIssue from "./pages/StockIssue";
+import Items from "./pages/Items";
 import Utensils from "./pages/Utensils";
 import Reports from "./pages/Reports";
 import Vendors from "./pages/Vendors";
@@ -26,6 +27,7 @@ const App = () => (
             <Route index element={<Dashboard />} />
             <Route path="purchase" element={<Purchase />} />
             <Route path="stock-issue" element={<StockIssue />} />
+            <Route path="items" element={<Items />} />
             <Route path="utensils" element={<Utensils />} />
             <Route path="vendors" element={<Vendors />} />
             <Route path="settings" element={<Settings />} />

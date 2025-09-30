@@ -64,7 +64,8 @@ export default function Purchase() {
       mrp: "", 
       discount: "", 
       discountType: "percentage", 
-      damaged: "" 
+      damaged: "",
+      customTotal: undefined as number | undefined
     }]
   });
   
@@ -160,7 +161,8 @@ export default function Purchase() {
         mrp: "", 
         discount: "", 
         discountType: "percentage", 
-        damaged: "" 
+        damaged: "",
+        customTotal: undefined as number | undefined
       }]
     }));
   };
@@ -185,8 +187,12 @@ export default function Purchase() {
     const quantity = parseFloat(item.quantity) || 0;
     const rate = parseFloat(item.rate) || 0;
     const discount = parseFloat(item.discount) || 0;
+    const damaged = parseFloat(item.damaged) || 0;
     
-    let total = quantity * rate;
+    // Calculate total based on usable quantity (quantity - damaged)
+    const usableQuantity = quantity - damaged;
+    let total = usableQuantity * rate;
+    
     if (item.discountType === 'percentage') {
       total = total * (1 - discount / 100);
     } else {
@@ -197,7 +203,11 @@ export default function Purchase() {
   };
 
   const getTotalAmount = () => {
-    return formData.items.reduce((sum, item) => sum + calculateItemTotal(item), 0);
+    return formData.items.reduce((sum, item) => {
+      // Use custom total if provided, otherwise calculate
+      const itemTotal = item.customTotal !== undefined ? parseFloat(item.customTotal.toString()) : calculateItemTotal(item);
+      return sum + itemTotal;
+    }, 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -237,7 +247,8 @@ export default function Purchase() {
         const rate = parseFloat(item.rate) || 0;
         const discount = parseFloat(item.discount) || 0;
         const damaged = parseFloat(item.damaged) || 0;
-        const itemTotal = calculateItemTotal(item);
+        // Use custom total if provided, otherwise calculate
+        const itemTotal = item.customTotal !== undefined ? parseFloat(item.customTotal.toString()) : calculateItemTotal(item);
 
         // Insert purchase item
         const { error: itemError } = await supabase
@@ -298,7 +309,8 @@ export default function Purchase() {
           mrp: "", 
           discount: "", 
           discountType: "percentage", 
-          damaged: "" 
+          damaged: "",
+          customTotal: undefined as number | undefined
         }]
       });
 
@@ -552,12 +564,19 @@ export default function Purchase() {
                         <div className="space-y-1.5 md:col-span-3">
                           <Label className="text-xs font-medium flex items-center gap-1">
                             <DollarSign className="h-3 w-3 text-primary" />
-                            Item Total Price
+                            Item Total Price (Editable)
                           </Label>
-                          <div className="h-9 flex items-center justify-center bg-primary/10 border-2 border-primary/20 rounded-md px-3">
-                            <span className="text-base font-bold text-primary">
-                              ₹{item.quantity && item.rate ? calculateItemTotal(item).toFixed(2) : '0.00'}
-                            </span>
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">₹</span>
+                            <Input
+                              type="number"
+                              value={item.customTotal !== undefined ? item.customTotal : (item.quantity && item.rate ? calculateItemTotal(item).toFixed(2) : '0.00')}
+                              onChange={(e) => updateItem(index, "customTotal", e.target.value)}
+                              placeholder="0.00"
+                              min="0"
+                              step="0.01"
+                              className="h-9 pl-6 font-bold text-primary"
+                            />
                           </div>
                         </div>
                       </div>

@@ -9,7 +9,8 @@ import {
   Menu,
   X,
   Users,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Box
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: ShoppingCart, label: "Purchase", path: "/purchase" },
   { icon: Package, label: "Stock Issue", path: "/stock-issue" },
+  { icon: Box, label: "Items", path: "/items" },
   { icon: Utensils, label: "Utensils", path: "/utensils" },
   { icon: Users, label: "Vendors", path: "/vendors" },
   { icon: SettingsIcon, label: "Settings", path: "/settings" },
