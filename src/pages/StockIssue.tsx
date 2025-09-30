@@ -14,6 +14,7 @@ interface Item {
   name: string;
   unit: string;
   current_stock: number;
+  rate_per_unit?: number;
 }
 
 interface IssueItem {
@@ -126,7 +127,8 @@ export default function StockIssue() {
                 ...item, 
                 name: value, 
                 unit: selectedItem.unit,
-                item_id: selectedItem.id 
+                item_id: selectedItem.id,
+                price: selectedItem.rate_per_unit?.toString() || ""
               };
             }
           }
