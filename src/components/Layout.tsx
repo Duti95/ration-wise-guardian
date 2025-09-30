@@ -7,7 +7,9 @@ import {
   Utensils, 
   FileText,
   Menu,
-  X
+  X,
+  Users,
+  Settings as SettingsIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,6 +19,8 @@ const menuItems = [
   { icon: ShoppingCart, label: "Purchase", path: "/purchase" },
   { icon: Package, label: "Stock Issue", path: "/stock-issue" },
   { icon: Utensils, label: "Utensils", path: "/utensils" },
+  { icon: Users, label: "Vendors", path: "/vendors" },
+  { icon: SettingsIcon, label: "Settings", path: "/settings" },
   { icon: FileText, label: "Reports", path: "/reports" },
 ];
 
@@ -41,10 +45,10 @@ export default function Layout() {
           <Utensils className="h-8 w-8 text-primary-foreground" />
           <div>
             <h1 className="text-xl font-bold text-primary-foreground">
-              School Mid-Day Meal Management
+              TREIS Hostel Management Software
             </h1>
             <p className="text-sm text-primary-foreground/80">
-              Government Nutrition Program
+              Complete Hostel Management Solution
             </p>
           </div>
         </div>

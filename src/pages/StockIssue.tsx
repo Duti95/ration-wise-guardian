@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Send, Calendar, Users, Package } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Send, Calendar, Package } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,51 +7,105 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-// Dummy data
-const availableItems = [
-  { name: "Rice", available: 450, unit: "kg" },
-  { name: "Dal", available: 75, unit: "kg" },
-  { name: "Oil", available: 25, unit: "litres" },
-  { name: "Vegetables", available: 120, unit: "kg" },
-  { name: "Milk", available: 45, unit: "litres" }
-];
+interface Item {
+  id: string;
+  name: string;
+  unit: string;
+  current_stock: number;
+}
 
-const classCategories = [
-  "Classes Below 8",
-  "Classes Below 11", 
-  "Intermediate (11-12)"
-];
+interface IssueItem {
+  name: string;
+  quantity: string;
+  unit: string;
+  price: string;
+  item_id?: string;
+}
 
-const recentIssues = [
-  {
-    id: "ISS001",
-    date: "2024-01-15",
-    class: "Classes Below 8",
-    items: [
-      { name: "Rice", quantity: 25, unit: "kg" },
-      { name: "Dal", quantity: 10, unit: "kg" }
-    ]
-  },
-  {
-    id: "ISS002", 
-    date: "2024-01-15",
-    class: "Classes Below 11",
-    items: [
-      { name: "Vegetables", quantity: 35, unit: "kg" },
-      { name: "Oil", quantity: 5, unit: "litres" }
-    ]
-  }
-];
+interface StockIssue {
+  id: string;
+  issue_date: string;
+  issue_type: string;
+  total_value: number;
+  items: Array<{
+    name: string;
+    quantity: number;
+    unit: string;
+    rate_per_unit: number;
+  }>;
+}
 
 export default function StockIssue() {
+  const [items, setItems] = useState<Item[]>([]);
+  const [recentIssues, setRecentIssues] = useState<StockIssue[]>([]);
   const [issueData, setIssueData] = useState({
     date: new Date().toISOString().split('T')[0],
     issueType: "Master",
-    items: [{ name: "", quantity: "", unit: "kg", price: "" }]
+    items: [{ name: "", quantity: "", unit: "kg", price: "" }] as IssueItem[]
   });
 
   const { toast } = useToast();
+
+  // Fetch items from database
+  useEffect(() => {
+    fetchItems();
+    fetchRecentIssues();
+  }, []);
+
+  const fetchItems = async () => {
+    const { data, error } = await supabase
+      .from('items')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    
+    if (error) {
+      console.error('Error fetching items:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch items from database",
+        variant: "destructive"
+      });
+    } else if (data) {
+      setItems(data);
+    }
+  };
+
+  const fetchRecentIssues = async () => {
+    const { data: issuesData, error } = await supabase
+      .from('stock_issues')
+      .select(`
+        *,
+        stock_issue_items (
+          quantity,
+          rate_per_unit,
+          item_id,
+          items (name, unit)
+        )
+      `)
+      .order('issue_date', { ascending: false })
+      .limit(5);
+
+    if (error) {
+      console.error('Error fetching recent issues:', error);
+    } else if (issuesData) {
+      const formattedIssues = issuesData.map(issue => ({
+        id: issue.id,
+        issue_date: new Date(issue.issue_date).toLocaleDateString('en-IN'),
+        issue_type: issue.issue_type,
+        total_value: issue.total_value || 0,
+        items: issue.stock_issue_items.map((item: any) => ({
+          name: item.items.name,
+          quantity: item.quantity,
+          unit: item.items.unit,
+          rate_per_unit: item.rate_per_unit
+        }))
+      }));
+      setRecentIssues(formattedIssues);
+    }
+  };
 
   const addItem = () => {
     setIssueData(prev => ({
@@ -60,34 +114,123 @@ export default function StockIssue() {
     }));
   };
 
-  const removeItem = (index: number) => {
-    setIssueData(prev => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== index)
-    }));
-  };
-
   const updateItem = (index: number, field: string, value: string) => {
     setIssueData(prev => ({
       ...prev,
-      items: prev.items.map((item, i) => 
-        i === index ? { ...item, [field]: value } : item
-      )
+      items: prev.items.map((item, i) => {
+        if (i === index) {
+          if (field === 'name') {
+            const selectedItem = items.find(it => it.name === value);
+            if (selectedItem) {
+              return { 
+                ...item, 
+                name: value, 
+                unit: selectedItem.unit,
+                item_id: selectedItem.id 
+              };
+            }
+          }
+          return { ...item, [field]: value };
+        }
+        return item;
+      })
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Stock Issued",
-      description: `Items issued successfully as ${issueData.issueType}`,
-    });
-    // Reset form
-    setIssueData({
-      date: new Date().toISOString().split('T')[0],
-      issueType: "Master",
-      items: [{ name: "", quantity: "", unit: "kg", price: "" }]
-    });
+  const handleIssue = async (index: number) => {
+    const item = issueData.items[index];
+    
+    if (!item.name || !item.quantity || !item.price) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill all fields before issuing",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const quantity = parseFloat(item.quantity);
+    const price = parseFloat(item.price);
+
+    // Check if sufficient stock is available
+    const stockItem = items.find(i => i.name === item.name);
+    if (!stockItem || stockItem.current_stock < quantity) {
+      toast({
+        title: "Insufficient Stock",
+        description: `Only ${stockItem?.current_stock || 0} ${item.unit} available`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Create stock issue
+      const { data: issueRecord, error: issueError } = await supabase
+        .from('stock_issues')
+        .insert({
+          issue_date: issueData.date,
+          issue_type: issueData.issueType,
+          total_value: quantity * price
+        })
+        .select()
+        .single();
+
+      if (issueError) throw issueError;
+
+      // Create stock issue item
+      const { error: itemError } = await supabase
+        .from('stock_issue_items')
+        .insert({
+          issue_id: issueRecord.id,
+          item_id: item.item_id,
+          quantity: quantity,
+          rate_per_unit: price,
+          total_price: quantity * price
+        });
+
+      if (itemError) throw itemError;
+
+      // Update item stock
+      const { error: updateError } = await supabase
+        .from('items')
+        .update({ 
+          current_stock: stockItem.current_stock - quantity 
+        })
+        .eq('id', item.item_id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Stock Issued",
+        description: `${item.name} issued successfully`,
+      });
+
+      // Remove the issued item from the form
+      setIssueData(prev => ({
+        ...prev,
+        items: prev.items.filter((_, i) => i !== index)
+      }));
+
+      // If no items left, add a new empty one
+      if (issueData.items.length === 1) {
+        setIssueData(prev => ({
+          ...prev,
+          items: [{ name: "", quantity: "", unit: "kg", price: "" }]
+        }));
+      }
+
+      // Refresh data
+      fetchItems();
+      fetchRecentIssues();
+
+    } catch (error) {
+      console.error('Error issuing stock:', error);
+      toast({
+        title: "Error",
+        description: "Failed to issue stock. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -95,7 +238,7 @@ export default function StockIssue() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Stock Issue</h1>
-          <p className="text-muted-foreground">Issue provisions to different class categories</p>
+          <p className="text-muted-foreground">Issue provisions to hostel</p>
         </div>
       </div>
 
@@ -110,8 +253,8 @@ export default function StockIssue() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Date and Class Selection */}
+              <div className="space-y-6">
+                {/* Date and Issue Type Selection */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="issueDate">Issue Date</Label>
@@ -152,26 +295,20 @@ export default function StockIssue() {
                   
                   {issueData.items.map((item, index) => (
                     <Card key={index} className="p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                         <div className="space-y-2">
                           <Label>Item</Label>
                           <Select 
                             value={item.name} 
-                            onValueChange={(value) => {
-                              const selectedItem = availableItems.find(i => i.name === value);
-                              updateItem(index, "name", value);
-                              if (selectedItem) {
-                                updateItem(index, "unit", selectedItem.unit);
-                              }
-                            }}
+                            onValueChange={(value) => updateItem(index, "name", value)}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select item" />
                             </SelectTrigger>
                             <SelectContent>
-                              {availableItems.map((availableItem) => (
-                                <SelectItem key={availableItem.name} value={availableItem.name}>
-                                  {availableItem.name} ({availableItem.available} {availableItem.unit} available)
+                              {items.map((availableItem) => (
+                                <SelectItem key={availableItem.id} value={availableItem.name}>
+                                  {availableItem.name} ({availableItem.current_stock} {availableItem.unit})
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -186,7 +323,6 @@ export default function StockIssue() {
                             placeholder="0"
                             min="0"
                             step="0.01"
-                            required
                           />
                         </div>
                         <div className="space-y-2">
@@ -197,27 +333,33 @@ export default function StockIssue() {
                             className="bg-muted"
                           />
                         </div>
+                        <div className="space-y-2">
+                          <Label>Price/Unit</Label>
+                          <Input
+                            type="number"
+                            value={item.price}
+                            onChange={(e) => updateItem(index, "price", e.target.value)}
+                            placeholder="0"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
                         <div className="flex items-end">
-                          {issueData.items.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => removeItem(index)}
-                            >
-                              Remove
-                            </Button>
-                          )}
+                          <Button
+                            type="button"
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleIssue(index)}
+                            className="w-full"
+                          >
+                            ISSUE
+                          </Button>
                         </div>
                       </div>
                     </Card>
                   ))}
                 </div>
-
-                <Button type="submit" className="w-full">
-                  Issue Stock
-                </Button>
-              </form>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -233,16 +375,16 @@ export default function StockIssue() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {availableItems.map((item, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+              {items.map((item) => (
+                <div key={item.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
                   <div>
                     <p className="font-medium text-sm">{item.name}</p>
                     <p className="text-xs text-muted-foreground">{item.unit}</p>
                   </div>
                   <Badge 
-                    variant={item.available < 50 ? "destructive" : item.available < 100 ? "secondary" : "default"}
+                    variant={item.current_stock < 50 ? "destructive" : item.current_stock < 100 ? "secondary" : "default"}
                   >
-                    {item.available}
+                    {item.current_stock}
                   </Badge>
                 </div>
               ))}
@@ -262,10 +404,10 @@ export default function StockIssue() {
                 <div key={issue.id} className="p-4 bg-muted/50 rounded-lg space-y-3">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-semibold text-sm">{issue.id}</p>
-                      <p className="text-xs text-muted-foreground">{issue.date}</p>
+                      <p className="font-semibold text-sm">{issue.id.substring(0, 8)}</p>
+                      <p className="text-xs text-muted-foreground">{issue.issue_date}</p>
                     </div>
-                    <Badge variant="outline">{issue.class}</Badge>
+                    <Badge variant="outline">{issue.issue_type}</Badge>
                   </div>
                   
                   <div className="space-y-1">
@@ -275,6 +417,13 @@ export default function StockIssue() {
                         <span className="font-medium">{item.quantity} {item.unit}</span>
                       </div>
                     ))}
+                  </div>
+                  
+                  <div className="pt-2 border-t border-border">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Total Value:</span>
+                      <span className="font-bold">₹{issue.total_value.toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
               ))}
