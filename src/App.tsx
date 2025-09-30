@@ -12,6 +12,7 @@ import Utensils from "./pages/Utensils";
 import Reports from "./pages/Reports";
 import Vendors from "./pages/Vendors";
 import Settings from "./pages/Settings";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/auth" element={<Auth />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="purchase" element={<Purchase />} />

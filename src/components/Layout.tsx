@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
 import { 
   LayoutDashboard, 
   ShoppingCart, 
@@ -10,7 +12,8 @@ import {
   X,
   Users,
   Settings as SettingsIcon,
-  Box
+  Box,
+  LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -29,41 +32,84 @@ const menuItems = [
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (!session) {
+        navigate("/auth");
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      if (!session) {
+        navigate("/auth");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
+
+  if (!user) {
+    return null;
+  }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="bg-primary border-b border-border h-16 flex items-center px-4 lg:px-6">
+      <header className="bg-primary border-b border-border h-16 flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden text-primary-foreground hover:bg-primary/90"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </Button>
+          
+          <div className="flex items-center gap-2 lg:gap-4">
+            <img src={treisLogo} alt="TREIS Logo" className="h-10 w-10 lg:h-12 lg:w-12" />
+            <div>
+              <h1 className="text-sm lg:text-xl font-bold text-primary-foreground">
+                TREIS Hostel Management
+              </h1>
+              <p className="text-xs lg:text-sm text-primary-foreground/80 hidden sm:block">
+                Complete Hostel Management Solution
+              </p>
+            </div>
+          </div>
+        </div>
+
         <Button
           variant="ghost"
           size="icon"
-          className="lg:hidden text-primary-foreground hover:bg-primary/90"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="text-primary-foreground hover:bg-primary/90"
+          onClick={handleLogout}
+          title="Logout"
         >
-          {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          <LogOut className="h-5 w-5" />
         </Button>
-        
-        <div className="flex items-center space-x-4 ml-4 lg:ml-0">
-          <img src={treisLogo} alt="TREIS Logo" className="h-12 w-12" />
-          <div>
-            <h1 className="text-xl font-bold text-primary-foreground">
-              TREIS Hostel Management Software
-            </h1>
-            <p className="text-sm text-primary-foreground/80">
-              Complete Hostel Management Solution
-            </p>
-          </div>
-        </div>
       </header>
 
-      <div className="flex">
+      <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside className={cn(
-          "bg-card border-r border-border w-64 min-h-[calc(100vh-4rem)] transition-transform duration-300 lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          "fixed lg:static inset-y-0 left-0 z-50 bg-card border-r border-border w-64 transition-transform duration-300 lg:translate-x-0 flex flex-col",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
-          <nav className="p-4 space-y-2">
+          <nav className="flex-1 overflow-y-auto p-4 space-y-2 mt-16 lg:mt-0">
             {menuItems.map((item) => (
               <Link
                 key={item.path}
@@ -84,7 +130,7 @@ export default function Layout() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           <Outlet />
         </main>
       </div>
