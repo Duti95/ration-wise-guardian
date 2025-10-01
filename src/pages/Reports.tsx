@@ -1,116 +1,381 @@
-import { useState } from "react";
-import { FileText, Download, Filter, Calendar, TrendingUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { FileText, Download, Filter, Plus, Save, X, Edit2, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import * as XLSX from 'xlsx';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-// Dummy data for reports
-const provisionIssueData = [
-  {
-    date: "2024-01-15",
-    item: "Rice",
-    issued: 75,
-    balance: 375,
-    unit: "kg",
-    class: "Classes Below 8"
-  },
-  {
-    date: "2024-01-15", 
-    item: "Dal",
-    issued: 25,
-    balance: 50,
-    unit: "kg",
-    class: "Classes Below 11"
-  },
-  {
-    date: "2024-01-14",
-    item: "Oil",
-    issued: 8,
-    balance: 17,
-    unit: "litres",
-    class: "Intermediate (11-12)"
-  },
-  {
-    date: "2024-01-14",
-    item: "Vegetables",
-    issued: 45,
-    balance: 75,
-    unit: "kg",
-    class: "Classes Below 8"
-  }
-];
+interface TransactionReport {
+  sno: number;
+  transaction_date: string;
+  vendor_name: string;
+  item_name: string;
+  purchased_quantity: number;
+  purchased_amount: number;
+  issued_quantity: number;
+  issued_amount: number;
+  balance_quantity: number;
+  balance_amount: number;
+  dep_warden_signature: string;
+  principal_signature: string;
+  remarks: string;
+  item_id: string;
+  transaction_id: string;
+  transaction_type: string;
+}
 
-const stockValueData = [
-  { item: "Rice", quantity: 375, unit: "kg", rate: 45, value: 16875 },
-  { item: "Dal", quantity: 50, unit: "kg", rate: 120, value: 6000 },
-  { item: "Oil", quantity: 17, unit: "litres", rate: 140, value: 2380 },
-  { item: "Vegetables", quantity: 75, unit: "kg", rate: 30, value: 2250 },
-  { item: "Milk", quantity: 45, unit: "litres", rate: 60, value: 2700 }
-];
-
-const reportTypes = [
-  "Date-wise Provision Issue",
-  "Item-wise Issue Report",
-  "Stock Value Report",
-  "Monthly Summary",
-  "Yearly Overview"
-];
-
-const filterPeriods = [
-  { label: "Today", value: "1" },
-  { label: "Last 7 days", value: "7" },
-  { label: "This Month", value: "30" },
-  { label: "This Year", value: "365" },
-  { label: "Custom Range", value: "custom" }
-];
+interface EditingCell {
+  rowIndex: number;
+  field: keyof TransactionReport;
+}
 
 export default function Reports() {
+  const [transactions, setTransactions] = useState<TransactionReport[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<TransactionReport[]>([]);
   const [filters, setFilters] = useState({
-    reportType: "",
-    period: "",
+    itemName: "",
+    vendorName: "",
     startDate: "",
-    endDate: "",
-    itemFilter: ""
+    endDate: ""
   });
-
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const handleGenerateReport = () => {
-    if (!filters.reportType) {
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [filters, transactions]);
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('item_transaction_report')
+        .select('*')
+        .order('transaction_date', { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch metadata for signatures and remarks
+      const { data: metadata, error: metadataError } = await supabase
+        .from('transaction_metadata')
+        .select('*');
+
+      if (metadataError) throw metadataError;
+
+      // Merge metadata with transactions
+      const mergedData = (data || []).map((transaction: any) => {
+        const meta = metadata?.find(
+          m => m.transaction_id === transaction.transaction_id && 
+               m.item_id === transaction.item_id &&
+               m.transaction_type === transaction.transaction_type
+        );
+        
+        return {
+          ...transaction,
+          dep_warden_signature: meta?.dep_warden_signature || '',
+          principal_signature: meta?.principal_signature || '',
+          remarks: meta?.remarks || '',
+          balance_quantity: meta?.custom_balance_quantity || transaction.balance_quantity,
+          balance_amount: meta?.custom_balance_amount || transaction.balance_amount,
+        };
+      });
+
+      setTransactions(mergedData);
+      setFilteredTransactions(mergedData);
+    } catch (error: any) {
       toast({
-        title: "Report Type Required",
-        description: "Please select a report type to generate.",
+        title: "Error loading transactions",
+        description: error.message,
         variant: "destructive"
       });
-      return;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...transactions];
+
+    if (filters.itemName) {
+      filtered = filtered.filter(t => 
+        t.item_name.toLowerCase().includes(filters.itemName.toLowerCase())
+      );
     }
 
+    if (filters.vendorName) {
+      filtered = filtered.filter(t => 
+        t.vendor_name?.toLowerCase().includes(filters.vendorName.toLowerCase())
+      );
+    }
+
+    if (filters.startDate) {
+      filtered = filtered.filter(t => 
+        new Date(t.transaction_date) >= new Date(filters.startDate)
+      );
+    }
+
+    if (filters.endDate) {
+      filtered = filtered.filter(t => 
+        new Date(t.transaction_date) <= new Date(filters.endDate)
+      );
+    }
+
+    setFilteredTransactions(filtered);
+  };
+
+  const startEditing = (rowIndex: number, field: keyof TransactionReport) => {
+    if (field === 'sno') return; // Cannot edit Sno
+    setEditingCell({ rowIndex, field });
+    setEditValue(String(filteredTransactions[rowIndex][field] || ''));
+  };
+
+  const cancelEditing = () => {
+    setEditingCell(null);
+    setEditValue("");
+  };
+
+  const saveEdit = async (rowIndex: number, field: keyof TransactionReport) => {
+    const transaction = filteredTransactions[rowIndex];
+    const newValue = editValue;
+
+    try {
+      // Check if we're editing a metadata field (signatures, remarks) or a data field
+      const metadataFields = ['dep_warden_signature', 'principal_signature', 'remarks', 'balance_quantity', 'balance_amount'];
+      
+      if (metadataFields.includes(field)) {
+        // Upsert to transaction_metadata
+        const metadataUpdate: any = {
+          transaction_id: transaction.transaction_id,
+          transaction_type: transaction.transaction_type,
+          item_id: transaction.item_id,
+        };
+
+        if (field === 'balance_quantity') {
+          metadataUpdate.custom_balance_quantity = parseFloat(newValue) || 0;
+        } else if (field === 'balance_amount') {
+          metadataUpdate.custom_balance_amount = parseFloat(newValue) || 0;
+        } else {
+          metadataUpdate[field] = newValue;
+        }
+
+        const { error } = await supabase
+          .from('transaction_metadata')
+          .upsert(metadataUpdate, {
+            onConflict: 'transaction_id,transaction_type,item_id'
+          });
+
+        if (error) throw error;
+      } else {
+        // Update the actual transaction table (purchases/stock_issues)
+        if (transaction.transaction_type === 'purchase') {
+          // Update purchase_items
+          const updateData: any = {};
+          if (field === 'purchased_quantity') {
+            updateData.quantity = parseFloat(newValue) || 0;
+            // Recalculate total_price
+            const item = filteredTransactions[rowIndex];
+            updateData.total_price = updateData.quantity * (item.purchased_amount / item.purchased_quantity);
+          } else if (field === 'purchased_amount') {
+            updateData.total_price = parseFloat(newValue) || 0;
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            const { error } = await supabase
+              .from('purchase_items')
+              .update(updateData)
+              .eq('purchase_id', transaction.transaction_id)
+              .eq('item_id', transaction.item_id);
+
+            if (error) throw error;
+          }
+        } else if (transaction.transaction_type === 'issue') {
+          // Update stock_issue_items
+          const updateData: any = {};
+          if (field === 'issued_quantity') {
+            updateData.quantity = parseFloat(newValue) || 0;
+            const item = filteredTransactions[rowIndex];
+            updateData.total_price = updateData.quantity * (item.issued_amount / item.issued_quantity);
+          } else if (field === 'issued_amount') {
+            updateData.total_price = parseFloat(newValue) || 0;
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            const { error } = await supabase
+              .from('stock_issue_items')
+              .update(updateData)
+              .eq('issue_id', transaction.transaction_id)
+              .eq('item_id', transaction.item_id);
+
+            if (error) throw error;
+          }
+        }
+      }
+
+      toast({
+        title: "Updated successfully",
+        description: `${field} has been updated.`,
+      });
+
+      await fetchTransactions(); // Refresh data
+      cancelEditing();
+    } catch (error: any) {
+      toast({
+        title: "Error updating",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const exportToExcel = () => {
+    const exportData = filteredTransactions.map((t, index) => ({
+      'S.No': index + 1,
+      'Date': new Date(t.transaction_date).toLocaleDateString('en-IN'),
+      'Vendor Name': t.vendor_name || 'N/A',
+      'Item Name': t.item_name,
+      'Purchased Qty': t.purchased_quantity,
+      'Purchased Amount': t.purchased_amount,
+      'Issued Qty': t.issued_quantity,
+      'Issued Amount': t.issued_amount,
+      'Balance Qty': t.balance_quantity,
+      'Balance Amount': t.balance_amount,
+      'Dep. Warden Signature': t.dep_warden_signature,
+      'Principal Signature': t.principal_signature,
+      'Remarks': t.remarks
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Transaction Report");
+    XLSX.writeFile(wb, `Transaction_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+
     toast({
-      title: "Report Generated",
-      description: `${filters.reportType} has been generated successfully.`,
+      title: "Export successful",
+      description: "Excel file has been downloaded.",
     });
   };
 
-  const handleDownloadReport = (format: string) => {
+  const exportToCSV = () => {
+    const exportData = filteredTransactions.map((t, index) => ({
+      'S.No': index + 1,
+      'Date': new Date(t.transaction_date).toLocaleDateString('en-IN'),
+      'Vendor Name': t.vendor_name || 'N/A',
+      'Item Name': t.item_name,
+      'Purchased Qty': t.purchased_quantity,
+      'Purchased Amount': t.purchased_amount,
+      'Issued Qty': t.issued_quantity,
+      'Issued Amount': t.issued_amount,
+      'Balance Qty': t.balance_quantity,
+      'Balance Amount': t.balance_amount,
+      'Dep. Warden Signature': t.dep_warden_signature,
+      'Principal Signature': t.principal_signature,
+      'Remarks': t.remarks
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const csv = XLSX.utils.sheet_to_csv(ws);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Transaction_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+
     toast({
-      title: "Download Started",
-      description: `Report is being downloaded in ${format.toUpperCase()} format.`,
+      title: "Export successful",
+      description: "CSV file has been downloaded.",
     });
   };
 
-  const totalStockValue = stockValueData.reduce((sum, item) => sum + item.value, 0);
-  const totalIssued = provisionIssueData.reduce((sum, item) => sum + item.issued, 0);
+  const renderCell = (transaction: TransactionReport, field: keyof TransactionReport, rowIndex: number) => {
+    const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.field === field;
+    const value = transaction[field];
+
+    if (field === 'sno') {
+      return <span className="font-medium">{rowIndex + 1}</span>;
+    }
+
+    if (field === 'transaction_date') {
+      if (isEditing) {
+        return (
+          <div className="flex gap-1">
+            <Input
+              type="date"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="h-8 text-xs"
+            />
+            <Button size="sm" onClick={() => saveEdit(rowIndex, field)} className="h-8 w-8 p-0">
+              <Save className="h-3 w-3" />
+            </Button>
+            <Button size="sm" variant="ghost" onClick={cancelEditing} className="h-8 w-8 p-0">
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        );
+      }
+      return (
+        <div className="flex items-center justify-between group cursor-pointer" onClick={() => startEditing(rowIndex, field)}>
+          <span>{new Date(value as string).toLocaleDateString('en-IN')}</span>
+          <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-100" />
+        </div>
+      );
+    }
+
+    if (isEditing) {
+      return (
+        <div className="flex gap-1">
+          <Input
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            className="h-8 text-xs"
+            type={typeof value === 'number' ? 'number' : 'text'}
+            step={typeof value === 'number' ? '0.01' : undefined}
+          />
+          <Button size="sm" onClick={() => saveEdit(rowIndex, field)} className="h-8 w-8 p-0">
+            <Save className="h-3 w-3" />
+          </Button>
+          <Button size="sm" variant="ghost" onClick={cancelEditing} className="h-8 w-8 p-0">
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center justify-between group cursor-pointer" onClick={() => startEditing(rowIndex, field)}>
+        <span className={typeof value === 'number' ? 'font-mono' : ''}>
+          {typeof value === 'number' ? (field.includes('amount') ? `₹${value.toFixed(2)}` : value.toFixed(2)) : (value || '-')}
+        </span>
+        <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-100" />
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Reports & Analytics</h1>
-          <p className="text-muted-foreground">Generate and analyze provision reports</p>
+          <h1 className="text-3xl font-bold text-foreground">Item-wise Transaction Report</h1>
+          <p className="text-muted-foreground">View and manage all inventory transactions</p>
         </div>
       </div>
 
@@ -119,47 +384,27 @@ export default function Reports() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5 text-primary" />
-            Report Filters
+            Filters
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label>Report Type</Label>
-              <Select 
-                value={filters.reportType} 
-                onValueChange={(value) => setFilters(prev => ({ ...prev, reportType: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select report type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {reportTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Item Name</Label>
+              <Input
+                placeholder="Filter by item"
+                value={filters.itemName}
+                onChange={(e) => setFilters(prev => ({ ...prev, itemName: e.target.value }))}
+              />
             </div>
 
             <div className="space-y-2">
-              <Label>Time Period</Label>
-              <Select 
-                value={filters.period} 
-                onValueChange={(value) => setFilters(prev => ({ ...prev, period: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filterPeriods.map((period) => (
-                    <SelectItem key={period.value} value={period.value}>
-                      {period.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Vendor Name</Label>
+              <Input
+                placeholder="Filter by vendor"
+                value={filters.vendorName}
+                onChange={(e) => setFilters(prev => ({ ...prev, vendorName: e.target.value }))}
+              />
             </div>
 
             <div className="space-y-2">
@@ -168,7 +413,6 @@ export default function Reports() {
                 type="date"
                 value={filters.startDate}
                 onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                disabled={filters.period !== "custom"}
               />
             </div>
 
@@ -178,146 +422,93 @@ export default function Reports() {
                 type="date"
                 value={filters.endDate}
                 onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                disabled={filters.period !== "custom"}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Item Filter</Label>
-              <Input
-                placeholder="Filter by item name"
-                value={filters.itemFilter}
-                onChange={(e) => setFilters(prev => ({ ...prev, itemFilter: e.target.value }))}
               />
             </div>
           </div>
 
           <div className="flex flex-wrap gap-4 mt-6">
-            <Button onClick={handleGenerateReport}>
-              <FileText className="h-4 w-4 mr-2" />
-              Generate Report
+            <Button onClick={() => setFilters({ itemName: "", vendorName: "", startDate: "", endDate: "" })} variant="outline">
+              Clear Filters
             </Button>
-            <Button variant="outline" onClick={() => handleDownloadReport('pdf')}>
+            <Button onClick={exportToExcel}>
               <Download className="h-4 w-4 mr-2" />
-              Download PDF
+              Export to Excel
             </Button>
-            <Button variant="outline" onClick={() => handleDownloadReport('excel')}>
+            <Button onClick={exportToCSV} variant="outline">
               <Download className="h-4 w-4 mr-2" />
-              Download Excel
+              Export to CSV
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Stock Value</CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">₹{totalStockValue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Current inventory value</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Items Issued</CardTitle>
-            <FileText className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-accent">{totalIssued}</div>
-            <p className="text-xs text-muted-foreground">Recent issues</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Items</CardTitle>
-            <Calendar className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-success">{stockValueData.length}</div>
-            <p className="text-xs text-muted-foreground">In inventory</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reports Generated</CardTitle>
-            <FileText className="h-4 w-4 text-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Report Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Date-wise Issues */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Provision Issues</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-5 gap-2 text-sm font-semibold text-muted-foreground border-b pb-2">
-                <span>Date</span>
-                <span>Item</span>
-                <span>Issued</span>
-                <span>Balance</span>
-                <span>Class</span>
-              </div>
-              {provisionIssueData.map((item, index) => (
-                <div key={index} className="grid grid-cols-5 gap-2 text-sm py-2 border-b last:border-b-0">
-                  <span className="text-muted-foreground">
-                    {new Date(item.date).toLocaleDateString('en-IN')}
-                  </span>
-                  <span className="font-medium">{item.item}</span>
-                  <span className="text-destructive">-{item.issued}{item.unit}</span>
-                  <span className="text-success">{item.balance}{item.unit}</span>
-                  <Badge variant="outline" className="text-xs w-fit">
-                    {item.class.split(' ')[0]}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stock Value Report */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Current Stock Valuation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-4 gap-2 text-sm font-semibold text-muted-foreground border-b pb-2">
-                <span>Item</span>
-                <span>Quantity</span>
-                <span>Rate</span>
-                <span>Value</span>
-              </div>
-              {stockValueData.map((item, index) => (
-                <div key={index} className="grid grid-cols-4 gap-2 text-sm py-2 border-b last:border-b-0">
-                  <span className="font-medium">{item.item}</span>
-                  <span>{item.quantity} {item.unit}</span>
-                  <span>₹{item.rate}</span>
-                  <span className="font-semibold text-primary">₹{item.value.toLocaleString()}</span>
-                </div>
-              ))}
-              <div className="grid grid-cols-4 gap-2 text-sm py-2 border-t-2 font-bold">
-                <span className="col-span-3">Total Value:</span>
-                <span className="text-primary">₹{totalStockValue.toLocaleString()}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Transaction Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Transactions ({filteredTransactions.length})
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[60px]">S.No</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Vendor</TableHead>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Purchased Qty</TableHead>
+                  <TableHead>PQ Amount</TableHead>
+                  <TableHead>Issued Qty</TableHead>
+                  <TableHead>Issued Amount</TableHead>
+                  <TableHead>Balance Qty</TableHead>
+                  <TableHead>Balance Amount</TableHead>
+                  <TableHead>Dep. Warden Sign</TableHead>
+                  <TableHead>Principal Sign</TableHead>
+                  <TableHead>Remarks</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                      Loading transactions...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredTransactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                      No transactions found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredTransactions.map((transaction, index) => (
+                    <TableRow key={`${transaction.transaction_id}-${transaction.item_id}`}>
+                      <TableCell>{renderCell(transaction, 'sno', index)}</TableCell>
+                      <TableCell>{renderCell(transaction, 'transaction_date', index)}</TableCell>
+                      <TableCell>{renderCell(transaction, 'vendor_name', index)}</TableCell>
+                      <TableCell>{renderCell(transaction, 'item_name', index)}</TableCell>
+                      <TableCell>{renderCell(transaction, 'purchased_quantity', index)}</TableCell>
+                      <TableCell>{renderCell(transaction, 'purchased_amount', index)}</TableCell>
+                      <TableCell>{renderCell(transaction, 'issued_quantity', index)}</TableCell>
+                      <TableCell>{renderCell(transaction, 'issued_amount', index)}</TableCell>
+                      <TableCell>{renderCell(transaction, 'balance_quantity', index)}</TableCell>
+                      <TableCell>{renderCell(transaction, 'balance_amount', index)}</TableCell>
+                      <TableCell>{renderCell(transaction, 'dep_warden_signature', index)}</TableCell>
+                      <TableCell>{renderCell(transaction, 'principal_signature', index)}</TableCell>
+                      <TableCell>{renderCell(transaction, 'remarks', index)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

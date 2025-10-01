@@ -125,6 +125,13 @@ export type Database = {
             foreignKeyName: "purchase_items_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "item_transaction_report"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "purchase_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "items"
             referencedColumns: ["id"]
           },
@@ -215,6 +222,13 @@ export type Database = {
             foreignKeyName: "stock_issue_items_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "item_transaction_report"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "stock_issue_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "items"
             referencedColumns: ["id"]
           },
@@ -276,6 +290,63 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      transaction_metadata: {
+        Row: {
+          created_at: string | null
+          custom_balance_amount: number | null
+          custom_balance_quantity: number | null
+          dep_warden_signature: string | null
+          id: string
+          item_id: string
+          principal_signature: string | null
+          remarks: string | null
+          transaction_id: string
+          transaction_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_balance_amount?: number | null
+          custom_balance_quantity?: number | null
+          dep_warden_signature?: string | null
+          id?: string
+          item_id: string
+          principal_signature?: string | null
+          remarks?: string | null
+          transaction_id: string
+          transaction_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_balance_amount?: number | null
+          custom_balance_quantity?: number | null
+          dep_warden_signature?: string | null
+          id?: string
+          item_id?: string
+          principal_signature?: string | null
+          remarks?: string | null
+          transaction_id?: string
+          transaction_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_metadata_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "item_transaction_report"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "transaction_metadata_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       utensils: {
         Row: {
@@ -351,7 +422,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      item_transaction_report: {
+        Row: {
+          balance_amount: number | null
+          balance_quantity: number | null
+          dep_warden_signature: string | null
+          issued_amount: number | null
+          issued_quantity: number | null
+          item_id: string | null
+          item_name: string | null
+          principal_signature: string | null
+          purchased_amount: number | null
+          purchased_quantity: number | null
+          remarks: string | null
+          sno: number | null
+          transaction_date: string | null
+          transaction_id: string | null
+          transaction_type: string | null
+          vendor_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
