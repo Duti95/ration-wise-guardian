@@ -177,27 +177,39 @@ export default function Purchase() {
   const updateItem = (index: number, field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      items: prev.items.map((item, i) => 
-        i === index ? { ...item, [field]: value } : item
-      )
+      items: prev.items.map((item, i) => {
+        if (i !== index) return item;
+        
+        const updatedItem = { ...item, [field]: value };
+        
+        // Auto-calculate rate when MRP or discount changes
+        if (field === 'mrp' || field === 'discount' || field === 'discountType') {
+          const mrp = parseFloat(field === 'mrp' ? value : updatedItem.mrp) || 0;
+          const discount = parseFloat(field === 'discount' ? value : updatedItem.discount) || 0;
+          const discountType = field === 'discountType' ? value : updatedItem.discountType;
+          
+          if (mrp > 0) {
+            let calculatedRate = mrp;
+            if (discountType === 'percentage') {
+              calculatedRate = mrp * (1 - discount / 100);
+            } else {
+              calculatedRate = mrp - discount;
+            }
+            updatedItem.rate = Math.max(0, calculatedRate).toFixed(2);
+          }
+        }
+        
+        return updatedItem;
+      })
     }));
   };
 
   const calculateItemTotal = (item: any) => {
     const quantity = parseFloat(item.quantity) || 0;
     const rate = parseFloat(item.rate) || 0;
-    const discount = parseFloat(item.discount) || 0;
-    const damaged = parseFloat(item.damaged) || 0;
     
-    // Calculate total based on usable quantity (quantity - damaged)
-    const usableQuantity = quantity - damaged;
-    let total = usableQuantity * rate;
-    
-    if (item.discountType === 'percentage') {
-      total = total * (1 - discount / 100);
-    } else {
-      total = total - discount;
-    }
+    // Rate already has discount applied, so just multiply by total quantity
+    const total = quantity * rate;
     
     return total;
   };
@@ -481,18 +493,15 @@ export default function Purchase() {
                       {/* Row 2: Pricing Details - First Row */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                         <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">Rate/Unit *</Label>
+                          <Label className="text-xs font-medium">Rate/Unit * (Auto-calculated)</Label>
                           <div className="relative">
                             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">₹</span>
                             <Input
                               type="number"
                               value={item.rate}
-                              onChange={(e) => updateItem(index, "rate", e.target.value)}
                               placeholder="0.00"
-                              min="0"
-                              step="0.01"
-                              required
-                              className="h-9 pl-6"
+                              readOnly
+                              className="h-9 pl-6 bg-muted/50"
                             />
                           </div>
                         </div>
