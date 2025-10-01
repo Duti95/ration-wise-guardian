@@ -207,9 +207,10 @@ export default function Purchase() {
   const calculateItemTotal = (item: any) => {
     const quantity = parseFloat(item.quantity) || 0;
     const rate = parseFloat(item.rate) || 0;
+    const damaged = parseFloat(item.damaged) || 0;
     
-    // Rate already has discount applied, so just multiply by total quantity
-    const total = quantity * rate;
+    // Calculate total: (quantity - damaged) * rate to deduct damaged amount
+    const total = (quantity - damaged) * rate;
     
     return total;
   };
