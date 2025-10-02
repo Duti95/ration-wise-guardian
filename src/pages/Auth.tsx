@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import treisLogo from "@/assets/treis-logo.png";
+import { loginSchema, signupSchema } from "@/lib/validations";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -23,9 +24,15 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
+      // Validate input
+      const validatedData = loginSchema.parse({
+        email: loginEmail.trim(),
         password: loginPassword,
+      });
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: validatedData.email,
+        password: validatedData.password,
       });
 
       if (error) {
@@ -41,10 +48,10 @@ export default function Auth() {
         });
         navigate("/");
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: "An unexpected error occurred",
+        title: "Validation Error",
+        description: error.errors?.[0]?.message || "Invalid input",
         variant: "destructive",
       });
     } finally {
@@ -57,9 +64,15 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email: signupEmail,
+      // Validate input with stronger password requirements
+      const validatedData = signupSchema.parse({
+        email: signupEmail.trim(),
         password: signupPassword,
+      });
+
+      const { error } = await supabase.auth.signUp({
+        email: validatedData.email,
+        password: validatedData.password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -79,10 +92,10 @@ export default function Auth() {
         setSignupEmail("");
         setSignupPassword("");
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: "An unexpected error occurred",
+        title: "Validation Error",
+        description: error.errors?.[0]?.message || "Invalid input",
         variant: "destructive",
       });
     } finally {
@@ -157,12 +170,14 @@ export default function Auth() {
                   <Input
                     id="signup-password"
                     type="password"
-                    placeholder="Create a password (min 6 characters)"
+                    placeholder="Min 8 chars, 1 uppercase, 1 lowercase, 1 number"
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
-                    minLength={6}
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Password must be at least 8 characters with uppercase, lowercase, and number
+                  </p>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Creating account..." : "Create Account"}

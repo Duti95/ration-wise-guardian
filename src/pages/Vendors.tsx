@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { vendorSchema } from "@/lib/validations";
 
 interface Vendor {
   id: string;
@@ -78,17 +79,26 @@ export default function Vendors() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.name || !formData.phone) {
-      toast({
-        title: "Error",
-        description: "Please fill in required fields (Name and Phone)",
-        variant: "destructive"
-      });
-      return;
-    }
 
     try {
+      // Validate input
+      const validatedData = vendorSchema.parse({
+        name: formData.name.trim(),
+        contact_person: formData.contact_person.trim() || undefined,
+        phone: formData.phone.trim() || undefined,
+        email: formData.email.trim() || undefined,
+        address: formData.address.trim() || undefined,
+      });
+
+      if (!validatedData.name) {
+        toast({
+          title: "Error",
+          description: "Vendor name is required",
+          variant: "destructive"
+        });
+        return;
+      }
+
       setLoading(true);
 
       if (editingVendor) {
@@ -96,8 +106,8 @@ export default function Vendors() {
         const { error } = await supabase
           .from('vendors')
           .update({
-            name: formData.name,
-            contact_person: formData.contact_person,
+            name: validatedData.name,
+            contact_person: validatedData.contact_person || "",
             phone: formData.phone,
             address: formData.address,
             email: formData.email
@@ -134,11 +144,11 @@ export default function Vendors() {
       resetForm();
       setIsDialogOpen(false);
       fetchVendors();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving vendor:', error);
       toast({
-        title: "Error",
-        description: "Failed to save vendor",
+        title: error.errors?.[0]?.message ? "Validation Error" : "Error",
+        description: error.errors?.[0]?.message || "Failed to save vendor",
         variant: "destructive"
       });
     } finally {

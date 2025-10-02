@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { itemSchema } from "@/lib/validations";
 
 interface Item {
   id: string;
@@ -73,25 +74,26 @@ export default function Items() {
   };
 
   const handleAddItem = async () => {
-    if (!newItem.name || !newItem.unit) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
+      // Validate input
+      const validatedData = itemSchema.parse({
+        name: newItem.name.trim(),
+        unit: newItem.unit.trim(),
+        danger_threshold: parseFloat(newItem.danger_threshold),
+        medium_threshold: parseFloat(newItem.medium_threshold),
+        current_stock: parseFloat(newItem.current_stock),
+        rate_per_unit: parseFloat(newItem.rate_per_unit),
+      });
+
       const { error } = await supabase
         .from('items')
         .insert({
-          name: newItem.name,
-          unit: newItem.unit,
-          danger_threshold: parseFloat(newItem.danger_threshold),
-          medium_threshold: parseFloat(newItem.medium_threshold),
-          current_stock: parseFloat(newItem.current_stock),
-          rate_per_unit: parseFloat(newItem.rate_per_unit),
+          name: validatedData.name,
+          unit: validatedData.unit,
+          danger_threshold: validatedData.danger_threshold,
+          medium_threshold: validatedData.medium_threshold,
+          current_stock: validatedData.current_stock,
+          rate_per_unit: validatedData.rate_per_unit,
           is_active: true
         });
 
