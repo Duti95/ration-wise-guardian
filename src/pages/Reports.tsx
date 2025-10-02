@@ -152,28 +152,84 @@ export default function Reports() {
     try {
       setLoading(true);
       
-      // Determine which view to query based on filter type
-      let query;
+      let allTransactions: any[] = [];
+      
       if (filters.type === 'purchase') {
-        query = supabase
+        // Fetch only purchase transactions
+        const { data, error } = await supabase
           .from('purchase_transactions_report')
           .select('*')
           .order('transaction_date', { ascending: false });
+        
+        if (error) throw error;
+        allTransactions = data || [];
+        
       } else if (filters.type === 'issue') {
-        query = supabase
+        // Fetch issue transactions
+        const { data: issueData, error: issueError } = await supabase
           .from('issue_transactions_report')
           .select('*')
           .order('transaction_date', { ascending: false });
+        
+        if (issueError) throw issueError;
+        
+        // For each issued item, find the most recent vendor from purchase history
+        const issueTransactionsWithVendor = await Promise.all(
+          (issueData || []).map(async (issueTransaction: any) => {
+            // Find the most recent purchase for this item
+            const { data: purchaseData } = await supabase
+              .from('purchase_transactions_report')
+              .select('vendor_name')
+              .eq('item_id', issueTransaction.item_id)
+              .order('transaction_date', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            return {
+              ...issueTransaction,
+              vendor_name: purchaseData?.vendor_name || issueTransaction.vendor_name || 'N/A'
+            };
+          })
+        );
+        
+        allTransactions = issueTransactionsWithVendor;
+        
       } else {
-        query = supabase
-          .from('item_transaction_report')
-          .select('*')
-          .order('transaction_date', { ascending: false });
+        // Fetch both purchase and issue transactions for "All" filter
+        const [purchaseResult, issueResult] = await Promise.all([
+          supabase
+            .from('purchase_transactions_report')
+            .select('*'),
+          supabase
+            .from('issue_transactions_report')
+            .select('*')
+        ]);
+        
+        if (purchaseResult.error) throw purchaseResult.error;
+        if (issueResult.error) throw issueResult.error;
+        
+        // For issue transactions, populate vendor names from purchase history
+        const issueTransactionsWithVendor = await Promise.all(
+          (issueResult.data || []).map(async (issueTransaction: any) => {
+            const { data: purchaseData } = await supabase
+              .from('purchase_transactions_report')
+              .select('vendor_name')
+              .eq('item_id', issueTransaction.item_id)
+              .order('transaction_date', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            return {
+              ...issueTransaction,
+              vendor_name: purchaseData?.vendor_name || issueTransaction.vendor_name || 'N/A'
+            };
+          })
+        );
+        
+        // Combine both arrays and sort by date
+        allTransactions = [...(purchaseResult.data || []), ...issueTransactionsWithVendor]
+          .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
       }
-      
-      const { data, error } = await query;
-
-      if (error) throw error;
 
       // Fetch metadata for signatures and remarks
       const { data: metadata, error: metadataError } = await supabase
@@ -182,8 +238,8 @@ export default function Reports() {
 
       if (metadataError) throw metadataError;
 
-      // Merge metadata with transactions and remove duplicates
-      const mergedData = (data || []).map((transaction: any) => {
+      // Merge metadata with transactions
+      const mergedData = allTransactions.map((transaction: any) => {
         const meta = metadata?.find(
           m => m.transaction_id === transaction.transaction_id && 
                m.item_id === transaction.item_id &&
@@ -200,7 +256,7 @@ export default function Reports() {
         };
       });
 
-      // Remove duplicates based on unique combination of transaction_id, item_id, and transaction_type
+      // Remove duplicates based on unique combination
       const uniqueTransactions = mergedData.filter((transaction, index, self) =>
         index === self.findIndex((t) => (
           t.transaction_id === transaction.transaction_id &&
