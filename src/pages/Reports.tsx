@@ -66,6 +66,11 @@ export default function Reports() {
     applyFilters();
   }, [filters, transactions]);
 
+  useEffect(() => {
+    // Re-fetch transactions when type filter changes
+    fetchTransactions();
+  }, [filters.type]);
+
   const fetchVendors = async () => {
     try {
       const { data, error } = await supabase
@@ -84,10 +89,27 @@ export default function Reports() {
   const fetchTransactions = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('item_transaction_report')
-        .select('*')
-        .order('transaction_date', { ascending: false });
+      
+      // Determine which view to query based on filter type
+      let query;
+      if (filters.type === 'purchase') {
+        query = supabase
+          .from('purchase_transactions_report')
+          .select('*')
+          .order('transaction_date', { ascending: false });
+      } else if (filters.type === 'issue') {
+        query = supabase
+          .from('issue_transactions_report')
+          .select('*')
+          .order('transaction_date', { ascending: false });
+      } else {
+        query = supabase
+          .from('item_transaction_report')
+          .select('*')
+          .order('transaction_date', { ascending: false });
+      }
+      
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -153,11 +175,8 @@ export default function Reports() {
       );
     }
 
-    if (filters.type && filters.type !== "all") {
-      filtered = filtered.filter(t => 
-        t.transaction_type === filters.type
-      );
-    }
+    // Type filtering is now handled by querying the appropriate view
+    // So we don't need to filter by type here anymore
 
     if (filters.startDate) {
       filtered = filtered.filter(t => 
