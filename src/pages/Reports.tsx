@@ -44,6 +44,7 @@ interface EditingCell {
 export default function Reports() {
   const [transactions, setTransactions] = useState<TransactionReport[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<TransactionReport[]>([]);
+  const [vendors, setVendors] = useState<Array<{ id: string; name: string }>>([]);
   const [filters, setFilters] = useState({
     itemName: "",
     vendorName: "",
@@ -57,11 +58,27 @@ export default function Reports() {
 
   useEffect(() => {
     fetchTransactions();
+    fetchVendors();
   }, []);
 
   useEffect(() => {
     applyFilters();
   }, [filters, transactions]);
+
+  const fetchVendors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setVendors(data || []);
+    } catch (error: any) {
+      console.error('Error fetching vendors:', error);
+    }
+  };
 
   const fetchTransactions = async () => {
     try {
@@ -120,9 +137,9 @@ export default function Reports() {
       );
     }
 
-    if (filters.vendorName) {
+    if (filters.vendorName && filters.vendorName !== "all") {
       filtered = filtered.filter(t => 
-        t.vendor_name?.toLowerCase().includes(filters.vendorName.toLowerCase())
+        t.vendor_name?.toLowerCase() === filters.vendorName.toLowerCase()
       );
     }
 
@@ -400,11 +417,22 @@ export default function Reports() {
 
             <div className="space-y-2">
               <Label>Vendor Name</Label>
-              <Input
-                placeholder="Filter by vendor"
+              <Select
                 value={filters.vendorName}
-                onChange={(e) => setFilters(prev => ({ ...prev, vendorName: e.target.value }))}
-              />
+                onValueChange={(value) => setFilters(prev => ({ ...prev, vendorName: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select vendor" />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="all">All Vendors</SelectItem>
+                  {vendors.map((vendor) => (
+                    <SelectItem key={vendor.id} value={vendor.name}>
+                      {vendor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -427,7 +455,7 @@ export default function Reports() {
           </div>
 
           <div className="flex flex-wrap gap-4 mt-6">
-            <Button onClick={() => setFilters({ itemName: "", vendorName: "", startDate: "", endDate: "" })} variant="outline">
+            <Button onClick={() => setFilters({ itemName: "", vendorName: "all", startDate: "", endDate: "" })} variant="outline">
               Clear Filters
             </Button>
             <Button onClick={exportToExcel}>
