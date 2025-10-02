@@ -97,7 +97,7 @@ export default function Reports() {
 
       if (metadataError) throw metadataError;
 
-      // Merge metadata with transactions
+      // Merge metadata with transactions and remove duplicates
       const mergedData = (data || []).map((transaction: any) => {
         const meta = metadata?.find(
           m => m.transaction_id === transaction.transaction_id && 
@@ -115,8 +115,17 @@ export default function Reports() {
         };
       });
 
-      setTransactions(mergedData);
-      setFilteredTransactions(mergedData);
+      // Remove duplicates based on unique combination of transaction_id, item_id, and transaction_type
+      const uniqueTransactions = mergedData.filter((transaction, index, self) =>
+        index === self.findIndex((t) => (
+          t.transaction_id === transaction.transaction_id &&
+          t.item_id === transaction.item_id &&
+          t.transaction_type === transaction.transaction_type
+        ))
+      );
+
+      setTransactions(uniqueTransactions);
+      setFilteredTransactions(uniqueTransactions);
     } catch (error: any) {
       toast({
         title: "Error loading transactions",
@@ -387,6 +396,9 @@ export default function Reports() {
     );
   };
 
+  const totalPurchaseAmount = filteredTransactions.reduce((sum, t) => sum + (t.purchased_amount || 0), 0);
+  const totalIssueAmount = filteredTransactions.reduce((sum, t) => sum + (t.issued_amount || 0), 0);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -394,6 +406,26 @@ export default function Reports() {
           <h1 className="text-3xl font-bold text-foreground">Item-wise Transaction Report</h1>
           <p className="text-muted-foreground">View and manage all inventory transactions</p>
         </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Purchase Amount</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">₹{totalPurchaseAmount.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Issue Amount</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">₹{totalIssueAmount.toFixed(2)}</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filter Section */}
