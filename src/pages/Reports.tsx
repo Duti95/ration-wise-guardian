@@ -60,6 +60,68 @@ export default function Reports() {
   useEffect(() => {
     fetchTransactions();
     fetchVendors();
+
+    // Set up real-time subscriptions for all three report tables
+    const purchaseChannel = supabase
+      .channel('purchase-reports-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'purchase_transactions_report' },
+        () => {
+          console.log('Purchase report changed, refreshing...');
+          if (filters.type === 'purchase' || filters.type === 'all') {
+            fetchTransactions();
+          }
+        }
+      )
+      .subscribe();
+
+    const issueChannel = supabase
+      .channel('issue-reports-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'issue_transactions_report' },
+        () => {
+          console.log('Issue report changed, refreshing...');
+          if (filters.type === 'issue' || filters.type === 'all') {
+            fetchTransactions();
+          }
+        }
+      )
+      .subscribe();
+
+    const itemChannel = supabase
+      .channel('item-reports-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'item_transaction_report' },
+        () => {
+          console.log('Item report changed, refreshing...');
+          if (filters.type === 'all') {
+            fetchTransactions();
+          }
+        }
+      )
+      .subscribe();
+
+    const metadataChannel = supabase
+      .channel('metadata-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transaction_metadata' },
+        () => {
+          console.log('Metadata changed, refreshing...');
+          fetchTransactions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(purchaseChannel);
+      supabase.removeChannel(issueChannel);
+      supabase.removeChannel(itemChannel);
+      supabase.removeChannel(metadataChannel);
+    };
   }, []);
 
   useEffect(() => {
