@@ -49,7 +49,8 @@ export default function Reports() {
     itemName: "",
     vendorName: "",
     startDate: "",
-    endDate: ""
+    endDate: "",
+    type: "all"
   });
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -149,6 +150,12 @@ export default function Reports() {
     if (filters.vendorName && filters.vendorName !== "all") {
       filtered = filtered.filter(t => 
         t.vendor_name?.toLowerCase() === filters.vendorName.toLowerCase()
+      );
+    }
+
+    if (filters.type && filters.type !== "all") {
+      filtered = filtered.filter(t => 
+        t.transaction_type === filters.type
       );
     }
 
@@ -437,7 +444,7 @@ export default function Reports() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="space-y-2">
               <Label>Item Name</Label>
               <Input
@@ -468,6 +475,23 @@ export default function Reports() {
             </div>
 
             <div className="space-y-2">
+              <Label>Type</Label>
+              <Select
+                value={filters.type}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="purchase">Purchased</SelectItem>
+                  <SelectItem value="issue">Issued</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>Start Date</Label>
               <Input
                 type="date"
@@ -487,7 +511,7 @@ export default function Reports() {
           </div>
 
           <div className="flex flex-wrap gap-4 mt-6">
-            <Button onClick={() => setFilters({ itemName: "", vendorName: "all", startDate: "", endDate: "" })} variant="outline">
+            <Button onClick={() => setFilters({ itemName: "", vendorName: "all", startDate: "", endDate: "", type: "all" })} variant="outline">
               Clear Filters
             </Button>
             <Button onClick={exportToExcel}>
@@ -519,6 +543,7 @@ export default function Reports() {
                 <TableRow>
                   <TableHead className="w-[60px]">S.No</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Vendor</TableHead>
                   <TableHead>Item</TableHead>
                   <TableHead>Purchased Qty</TableHead>
@@ -535,21 +560,30 @@ export default function Reports() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                       Loading transactions...
                     </TableCell>
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                       No transactions found
                     </TableCell>
-                  </TableRow>
+                   </TableRow>
                 ) : (
                   filteredTransactions.map((transaction, index) => (
-                    <TableRow key={`${transaction.transaction_id}-${transaction.item_id}`}>
+                    <TableRow key={`${transaction.transaction_id}-${transaction.item_id}-${transaction.transaction_type}`}>
                       <TableCell>{renderCell(transaction, 'sno', index)}</TableCell>
                       <TableCell>{renderCell(transaction, 'transaction_date', index)}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          transaction.transaction_type === 'purchase' 
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                        }`}>
+                          {transaction.transaction_type === 'purchase' ? 'Purchased' : 'Issued'}
+                        </span>
+                      </TableCell>
                       <TableCell>{renderCell(transaction, 'vendor_name', index)}</TableCell>
                       <TableCell>{renderCell(transaction, 'item_name', index)}</TableCell>
                       <TableCell>{renderCell(transaction, 'purchased_quantity', index)}</TableCell>
@@ -562,7 +596,7 @@ export default function Reports() {
                       <TableCell>{renderCell(transaction, 'principal_signature', index)}</TableCell>
                       <TableCell>{renderCell(transaction, 'remarks', index)}</TableCell>
                     </TableRow>
-                  ))
+                   ))
                 )}
               </TableBody>
             </Table>
