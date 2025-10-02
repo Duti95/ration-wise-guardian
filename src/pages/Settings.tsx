@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Shield, Upload, Calendar, Key, Smartphone, Monitor } from "lucide-react";
+import { Shield, Upload, Calendar, Key, Smartphone, Monitor, Trash2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,8 @@ export default function Settings() {
   const [adminPassword, setAdminPassword] = useState("");
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [enteredPassword, setEnteredPassword] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
   
   const { toast } = useToast();
 
@@ -91,6 +94,54 @@ export default function Settings() {
         description: "Incorrect password",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleDatabaseReset = async () => {
+    if (resetCode !== "1978") {
+      toast({
+        title: "Error",
+        description: "Invalid confirmation code",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to reset the database",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('reset-database', {
+        body: { confirmationCode: resetCode }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Database has been reset successfully"
+      });
+      setResetCode("");
+      
+      // Reload the page after a short delay
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+      console.error('Reset error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reset database",
+        variant: "destructive"
+      });
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -243,6 +294,35 @@ export default function Settings() {
                     : "Only current date entry allowed"
                   }
                 </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t">
+              <div className="space-y-0.5">
+                <Label className="text-base text-destructive flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  Reset Database
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Clear all data from the database. This action cannot be undone.
+                </p>
+              </div>
+              
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="Enter code 1978 to confirm"
+                  value={resetCode}
+                  onChange={(e) => setResetCode(e.target.value)}
+                  maxLength={4}
+                />
+                <Button 
+                  variant="destructive"
+                  onClick={handleDatabaseReset}
+                  disabled={resetCode !== "1978" || isResetting}
+                >
+                  {isResetting ? "Resetting..." : "Reset"}
+                </Button>
               </div>
             </div>
           </CardContent>
