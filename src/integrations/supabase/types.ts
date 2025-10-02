@@ -132,13 +132,6 @@ export type Database = {
             foreignKeyName: "purchase_items_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "item_transaction_report"
-            referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "purchase_items_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
             referencedRelation: "items"
             referencedColumns: ["id"]
           },
@@ -251,13 +244,6 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "issue_transactions_report"
-            referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "stock_issue_items_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "item_transaction_report"
             referencedColumns: ["item_id"]
           },
           {
@@ -379,13 +365,6 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "issue_transactions_report"
-            referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "transaction_metadata_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "item_transaction_report"
             referencedColumns: ["item_id"]
           },
           {
