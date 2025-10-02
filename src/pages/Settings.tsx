@@ -311,7 +311,7 @@ export default function Settings() {
               <div className="flex gap-2">
                 <Input
                   type="text"
-                  placeholder="Enter code 1978 to confirm"
+                  placeholder="Enter confirmation code"
                   value={resetCode}
                   onChange={(e) => setResetCode(e.target.value)}
                   maxLength={4}
