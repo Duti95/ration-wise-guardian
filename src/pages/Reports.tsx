@@ -26,6 +26,7 @@ interface TransactionReport {
   item_name: string;
   purchased_quantity: number;
   purchased_amount: number;
+  damaged_quantity: number;
   issued_quantity: number;
   issued_amount: number;
   balance_quantity: number;
@@ -157,14 +158,32 @@ export default function Reports() {
       let allTransactions: any[] = [];
       
       if (filters.type === 'purchase') {
-        // Fetch only purchase transactions
+        // Fetch purchase transactions with damaged quantities
         const { data, error } = await supabase
           .from('purchase_transactions_report')
           .select('*')
           .order('transaction_date', { ascending: false });
         
         if (error) throw error;
-        allTransactions = data || [];
+        
+        // Fetch damaged quantities from purchase_items
+        const transactionsWithDamages = await Promise.all(
+          (data || []).map(async (transaction: any) => {
+            const { data: purchaseItem } = await supabase
+              .from('purchase_items')
+              .select('damaged_quantity')
+              .eq('purchase_id', transaction.transaction_id)
+              .eq('item_id', transaction.item_id)
+              .maybeSingle();
+            
+            return {
+              ...transaction,
+              damaged_quantity: purchaseItem?.damaged_quantity || 0
+            };
+          })
+        );
+        
+        allTransactions = transactionsWithDamages;
         
       } else if (filters.type === 'issue') {
         // Fetch issue transactions
@@ -189,6 +208,7 @@ export default function Reports() {
             
             return {
               ...issueTransaction,
+              damaged_quantity: 0, // Issue transactions don't have damaged quantities
               vendor_name: purchaseData?.vendor_name || issueTransaction.vendor_name || 'N/A'
             };
           })
@@ -210,6 +230,23 @@ export default function Reports() {
         if (purchaseResult.error) throw purchaseResult.error;
         if (issueResult.error) throw issueResult.error;
         
+        // For purchase transactions, fetch damaged quantities
+        const purchaseTransactionsWithDamages = await Promise.all(
+          (purchaseResult.data || []).map(async (transaction: any) => {
+            const { data: purchaseItem } = await supabase
+              .from('purchase_items')
+              .select('damaged_quantity')
+              .eq('purchase_id', transaction.transaction_id)
+              .eq('item_id', transaction.item_id)
+              .maybeSingle();
+            
+            return {
+              ...transaction,
+              damaged_quantity: purchaseItem?.damaged_quantity || 0
+            };
+          })
+        );
+        
         // For issue transactions, populate vendor names from purchase history
         const issueTransactionsWithVendor = await Promise.all(
           (issueResult.data || []).map(async (issueTransaction: any) => {
@@ -223,13 +260,14 @@ export default function Reports() {
             
             return {
               ...issueTransaction,
+              damaged_quantity: 0, // Issue transactions don't have damaged quantities
               vendor_name: purchaseData?.vendor_name || issueTransaction.vendor_name || 'N/A'
             };
           })
         );
         
         // Combine both arrays and sort by date
-        allTransactions = [...(purchaseResult.data || []), ...issueTransactionsWithVendor]
+        allTransactions = [...purchaseTransactionsWithDamages, ...issueTransactionsWithVendor]
           .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
       }
 
@@ -726,12 +764,13 @@ export default function Reports() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[60px]">S.No</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Date & Time</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Vendor</TableHead>
                   <TableHead>Item</TableHead>
                   <TableHead>Purchased Qty</TableHead>
                   <TableHead>PQ Amount</TableHead>
+                  <TableHead>Damaged Qty</TableHead>
                   <TableHead>Issued Qty</TableHead>
                   <TableHead>Issued Amount</TableHead>
                   <TableHead>Balance Qty</TableHead>
@@ -744,13 +783,13 @@ export default function Reports() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={15} className="text-center py-8 text-muted-foreground">
                       Loading transactions...
                     </TableCell>
                   </TableRow>
                 ) : filteredTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={15} className="text-center py-8 text-muted-foreground">
                       No transactions found
                     </TableCell>
                    </TableRow>
@@ -772,6 +811,11 @@ export default function Reports() {
                       <TableCell>{renderCell(transaction, 'item_name', index)}</TableCell>
                       <TableCell>{renderCell(transaction, 'purchased_quantity', index)}</TableCell>
                       <TableCell>{renderCell(transaction, 'purchased_amount', index)}</TableCell>
+                      <TableCell>
+                        <span className={`font-mono ${transaction.damaged_quantity > 0 ? 'text-destructive font-semibold' : ''}`}>
+                          {transaction.damaged_quantity || '-'}
+                        </span>
+                      </TableCell>
                       <TableCell>{renderCell(transaction, 'issued_quantity', index)}</TableCell>
                       <TableCell>{renderCell(transaction, 'issued_amount', index)}</TableCell>
                       <TableCell>{renderCell(transaction, 'balance_quantity', index)}</TableCell>
