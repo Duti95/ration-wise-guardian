@@ -41,138 +41,6 @@ export type Database = {
         }
         Relationships: []
       }
-      issue_transactions_report: {
-        Row: {
-          balance_amount: number | null
-          balance_quantity: number | null
-          created_at: string | null
-          dep_warden_signature: string | null
-          id: string
-          issued_amount: number | null
-          issued_quantity: number | null
-          item_id: string | null
-          item_name: string | null
-          principal_signature: string | null
-          purchased_amount: number | null
-          purchased_quantity: number | null
-          remarks: string | null
-          sno: number | null
-          transaction_date: string | null
-          transaction_id: string | null
-          transaction_type: string | null
-          updated_at: string | null
-          vendor_name: string | null
-        }
-        Insert: {
-          balance_amount?: number | null
-          balance_quantity?: number | null
-          created_at?: string | null
-          dep_warden_signature?: string | null
-          id?: string
-          issued_amount?: number | null
-          issued_quantity?: number | null
-          item_id?: string | null
-          item_name?: string | null
-          principal_signature?: string | null
-          purchased_amount?: number | null
-          purchased_quantity?: number | null
-          remarks?: string | null
-          sno?: number | null
-          transaction_date?: string | null
-          transaction_id?: string | null
-          transaction_type?: string | null
-          updated_at?: string | null
-          vendor_name?: string | null
-        }
-        Update: {
-          balance_amount?: number | null
-          balance_quantity?: number | null
-          created_at?: string | null
-          dep_warden_signature?: string | null
-          id?: string
-          issued_amount?: number | null
-          issued_quantity?: number | null
-          item_id?: string | null
-          item_name?: string | null
-          principal_signature?: string | null
-          purchased_amount?: number | null
-          purchased_quantity?: number | null
-          remarks?: string | null
-          sno?: number | null
-          transaction_date?: string | null
-          transaction_id?: string | null
-          transaction_type?: string | null
-          updated_at?: string | null
-          vendor_name?: string | null
-        }
-        Relationships: []
-      }
-      item_transaction_report: {
-        Row: {
-          balance_amount: number | null
-          balance_quantity: number | null
-          created_at: string | null
-          dep_warden_signature: string | null
-          id: string
-          issued_amount: number | null
-          issued_quantity: number | null
-          item_id: string | null
-          item_name: string | null
-          principal_signature: string | null
-          purchased_amount: number | null
-          purchased_quantity: number | null
-          remarks: string | null
-          sno: number | null
-          transaction_date: string | null
-          transaction_id: string | null
-          transaction_type: string | null
-          updated_at: string | null
-          vendor_name: string | null
-        }
-        Insert: {
-          balance_amount?: number | null
-          balance_quantity?: number | null
-          created_at?: string | null
-          dep_warden_signature?: string | null
-          id?: string
-          issued_amount?: number | null
-          issued_quantity?: number | null
-          item_id?: string | null
-          item_name?: string | null
-          principal_signature?: string | null
-          purchased_amount?: number | null
-          purchased_quantity?: number | null
-          remarks?: string | null
-          sno?: number | null
-          transaction_date?: string | null
-          transaction_id?: string | null
-          transaction_type?: string | null
-          updated_at?: string | null
-          vendor_name?: string | null
-        }
-        Update: {
-          balance_amount?: number | null
-          balance_quantity?: number | null
-          created_at?: string | null
-          dep_warden_signature?: string | null
-          id?: string
-          issued_amount?: number | null
-          issued_quantity?: number | null
-          item_id?: string | null
-          item_name?: string | null
-          principal_signature?: string | null
-          purchased_amount?: number | null
-          purchased_quantity?: number | null
-          remarks?: string | null
-          sno?: number | null
-          transaction_date?: string | null
-          transaction_id?: string | null
-          transaction_type?: string | null
-          updated_at?: string | null
-          vendor_name?: string | null
-        }
-        Relationships: []
-      }
       items: {
         Row: {
           created_at: string
@@ -257,8 +125,29 @@ export type Database = {
             foreignKeyName: "purchase_items_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "issue_transactions_report"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "purchase_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "items"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_transactions_report"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_transactions_report"
+            referencedColumns: ["transaction_id"]
           },
           {
             foreignKeyName: "purchase_items_purchase_id_fkey"
@@ -268,72 +157,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      purchase_transactions_report: {
-        Row: {
-          balance_amount: number | null
-          balance_quantity: number | null
-          created_at: string | null
-          dep_warden_signature: string | null
-          id: string
-          issued_amount: number | null
-          issued_quantity: number | null
-          item_id: string | null
-          item_name: string | null
-          principal_signature: string | null
-          purchased_amount: number | null
-          purchased_quantity: number | null
-          remarks: string | null
-          sno: number | null
-          transaction_date: string | null
-          transaction_id: string | null
-          transaction_type: string | null
-          updated_at: string | null
-          vendor_name: string | null
-        }
-        Insert: {
-          balance_amount?: number | null
-          balance_quantity?: number | null
-          created_at?: string | null
-          dep_warden_signature?: string | null
-          id?: string
-          issued_amount?: number | null
-          issued_quantity?: number | null
-          item_id?: string | null
-          item_name?: string | null
-          principal_signature?: string | null
-          purchased_amount?: number | null
-          purchased_quantity?: number | null
-          remarks?: string | null
-          sno?: number | null
-          transaction_date?: string | null
-          transaction_id?: string | null
-          transaction_type?: string | null
-          updated_at?: string | null
-          vendor_name?: string | null
-        }
-        Update: {
-          balance_amount?: number | null
-          balance_quantity?: number | null
-          created_at?: string | null
-          dep_warden_signature?: string | null
-          id?: string
-          issued_amount?: number | null
-          issued_quantity?: number | null
-          item_id?: string | null
-          item_name?: string | null
-          principal_signature?: string | null
-          purchased_amount?: number | null
-          purchased_quantity?: number | null
-          remarks?: string | null
-          sno?: number | null
-          transaction_date?: string | null
-          transaction_id?: string | null
-          transaction_type?: string | null
-          updated_at?: string | null
-          vendor_name?: string | null
-        }
-        Relationships: []
       }
       purchases: {
         Row: {
@@ -406,6 +229,13 @@ export type Database = {
             foreignKeyName: "stock_issue_items_issue_id_fkey"
             columns: ["issue_id"]
             isOneToOne: false
+            referencedRelation: "issue_transactions_report"
+            referencedColumns: ["transaction_id"]
+          },
+          {
+            foreignKeyName: "stock_issue_items_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
             referencedRelation: "stock_issues"
             referencedColumns: ["id"]
           },
@@ -413,8 +243,22 @@ export type Database = {
             foreignKeyName: "stock_issue_items_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "issue_transactions_report"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "stock_issue_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "items"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issue_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_transactions_report"
+            referencedColumns: ["item_id"]
           },
         ]
       }
@@ -520,8 +364,22 @@ export type Database = {
             foreignKeyName: "transaction_metadata_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
+            referencedRelation: "issue_transactions_report"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "transaction_metadata_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
             referencedRelation: "items"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_metadata_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_transactions_report"
+            referencedColumns: ["item_id"]
           },
         ]
       }
@@ -620,7 +478,58 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      issue_transactions_report: {
+        Row: {
+          balance_amount: number | null
+          balance_quantity: number | null
+          created_at: string | null
+          damaged_amount: number | null
+          damaged_quantity: number | null
+          dep_warden_signature: string | null
+          id: string | null
+          issued_amount: number | null
+          issued_quantity: number | null
+          item_id: string | null
+          item_name: string | null
+          principal_signature: string | null
+          purchased_amount: number | null
+          purchased_quantity: number | null
+          remarks: string | null
+          sno: number | null
+          transaction_date: string | null
+          transaction_id: string | null
+          transaction_type: string | null
+          updated_at: string | null
+          vendor_name: string | null
+        }
+        Relationships: []
+      }
+      purchase_transactions_report: {
+        Row: {
+          balance_amount: number | null
+          balance_quantity: number | null
+          created_at: string | null
+          damaged_amount: number | null
+          damaged_quantity: number | null
+          dep_warden_signature: string | null
+          id: string | null
+          issued_amount: number | null
+          issued_quantity: number | null
+          item_id: string | null
+          item_name: string | null
+          principal_signature: string | null
+          purchased_amount: number | null
+          purchased_quantity: number | null
+          remarks: string | null
+          sno: number | null
+          transaction_date: string | null
+          transaction_id: string | null
+          transaction_type: string | null
+          updated_at: string | null
+          vendor_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
