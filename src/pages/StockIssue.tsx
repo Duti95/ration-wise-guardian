@@ -140,6 +140,131 @@ export default function StockIssue() {
     }));
   };
 
+  const handleIssueAll = async () => {
+    // Validate all items first
+    const validItems = issueData.items.filter(item => 
+      item.name && item.quantity && item.price && item.item_id
+    );
+
+    if (validItems.length === 0) {
+      toast({
+        title: "No Items to Issue",
+        description: "Please add at least one complete item",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate using Zod schema for all items
+    try {
+      const validationData = {
+        issue_date: issueData.date,
+        issue_type: issueData.issueType as "Master" | "Handloan",
+        items: validItems.map(item => ({
+          item_id: item.item_id || "",
+          quantity: parseFloat(item.quantity) || 0,
+          rate_per_unit: parseFloat(item.price) || 0
+        }))
+      };
+
+      stockIssueSchema.parse(validationData);
+    } catch (validationError: any) {
+      toast({
+        title: "Validation Error",
+        description: validationError.errors?.[0]?.message || "Please check all fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check stock availability for all items
+    for (const item of validItems) {
+      const quantity = parseFloat(item.quantity);
+      const stockItem = items.find(i => i.name === item.name);
+      if (!stockItem || stockItem.current_stock < quantity) {
+        toast({
+          title: "Insufficient Stock",
+          description: `${item.name}: Only ${stockItem?.current_stock || 0} ${item.unit} available`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    try {
+      // Calculate total value
+      const totalValue = validItems.reduce((sum, item) => 
+        sum + (parseFloat(item.quantity) * parseFloat(item.price)), 0
+      );
+
+      // Create stock issue
+      const { data: issueRecord, error: issueError } = await supabase
+        .from('stock_issues')
+        .insert({
+          issue_date: issueData.date,
+          issue_type: issueData.issueType,
+          total_value: totalValue
+        })
+        .select()
+        .single();
+
+      if (issueError) throw issueError;
+
+      // Create all stock issue items
+      const issueItems = validItems.map(item => ({
+        issue_id: issueRecord.id,
+        item_id: item.item_id,
+        quantity: parseFloat(item.quantity),
+        rate_per_unit: parseFloat(item.price),
+        total_price: parseFloat(item.quantity) * parseFloat(item.price)
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('stock_issue_items')
+        .insert(issueItems);
+
+      if (itemsError) throw itemsError;
+
+      // Update stock for all items
+      for (const item of validItems) {
+        const stockItem = items.find(i => i.name === item.name);
+        if (stockItem) {
+          const { error: updateError } = await supabase
+            .from('items')
+            .update({ 
+              current_stock: stockItem.current_stock - parseFloat(item.quantity)
+            })
+            .eq('id', item.item_id);
+
+          if (updateError) throw updateError;
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: `${validItems.length} items issued successfully`,
+      });
+
+      // Reset form
+      setIssueData(prev => ({
+        ...prev,
+        items: [{ name: "", quantity: "", unit: "kg", price: "" }]
+      }));
+
+      // Refresh data
+      fetchItems();
+      fetchRecentIssues();
+
+    } catch (error) {
+      console.error('Error issuing stock:', error);
+      toast({
+        title: "Error",
+        description: "Failed to issue stock. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleIssue = async (index: number) => {
     const item = issueData.items[index];
     
@@ -303,10 +428,22 @@ export default function StockIssue() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <Label className="text-base font-semibold">Items to Issue</Label>
-                    <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                      <Package className="h-4 w-4 mr-2" />
-                      Add Item
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                        <Package className="h-4 w-4 mr-2" />
+                        Add Item
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="default" 
+                        size="sm" 
+                        onClick={handleIssueAll}
+                        disabled={issueData.items.every(item => !item.name || !item.quantity || !item.price)}
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Issue All Items
+                      </Button>
+                    </div>
                   </div>
                   
                   {issueData.items.map((item, index) => (
