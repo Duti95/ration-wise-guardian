@@ -316,7 +316,16 @@ export default function Reports() {
   const startEditing = (rowIndex: number, field: keyof TransactionReport) => {
     if (field === 'sno') return; // Cannot edit Sno
     setEditingCell({ rowIndex, field });
-    setEditValue(String(filteredTransactions[rowIndex][field] || ''));
+    const value = filteredTransactions[rowIndex][field];
+    
+    // Format datetime for datetime-local input
+    if (field === 'transaction_date' && value) {
+      const date = new Date(value as string);
+      const formatted = date.toISOString().slice(0, 16);
+      setEditValue(formatted);
+    } else {
+      setEditValue(String(value || ''));
+    }
   };
 
   const cancelEditing = () => {
@@ -526,7 +535,7 @@ export default function Reports() {
         return (
           <div className="flex gap-1">
             <Input
-              type="date"
+              type="datetime-local"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               className="h-8 text-xs"
@@ -542,7 +551,7 @@ export default function Reports() {
       }
       return (
         <div className="flex items-center justify-between group cursor-pointer" onClick={() => startEditing(rowIndex, field)}>
-          <span>{new Date(value as string).toLocaleDateString('en-IN')}</span>
+          <span>{new Date(value as string).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</span>
           <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-100" />
         </div>
       );
