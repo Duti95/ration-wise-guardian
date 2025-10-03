@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from 'xlsx';
+import { reportFilterSchema, transactionMetadataSchema } from "@/lib/validations";
+import { z } from "zod";
 import {
   Table,
   TableBody,
@@ -327,10 +329,35 @@ export default function Reports() {
     const newValue = editValue;
 
     try {
-      // Check if we're editing a metadata field (signatures, remarks) or a data field
+      // Validate metadata fields
       const metadataFields = ['dep_warden_signature', 'principal_signature', 'remarks', 'balance_quantity', 'balance_amount'];
       
       if (metadataFields.includes(field)) {
+        // Validate using Zod schema
+        try {
+          const validationData: any = {};
+          if (field === 'balance_quantity') {
+            validationData.custom_balance_quantity = parseFloat(newValue) || 0;
+          } else if (field === 'balance_amount') {
+            validationData.custom_balance_amount = parseFloat(newValue) || 0;
+          } else if (field === 'dep_warden_signature') {
+            validationData.dep_warden_signature = newValue;
+          } else if (field === 'principal_signature') {
+            validationData.principal_signature = newValue;
+          } else if (field === 'remarks') {
+            validationData.remarks = newValue;
+          }
+          
+          transactionMetadataSchema.parse(validationData);
+        } catch (validationError: any) {
+          toast({
+            title: "Validation Error",
+            description: validationError.errors?.[0]?.message || "Invalid input value",
+            variant: "destructive"
+          });
+          return;
+        }
+
         // Upsert to transaction_metadata
         const metadataUpdate: any = {
           transaction_id: transaction.transaction_id,
@@ -354,6 +381,17 @@ export default function Reports() {
 
         if (error) throw error;
       } else {
+        // Validate numeric fields
+        const numericValue = parseFloat(newValue);
+        if (isNaN(numericValue) || numericValue < 0) {
+          toast({
+            title: "Validation Error",
+            description: "Value must be a positive number",
+            variant: "destructive"
+          });
+          return;
+        }
+
         // Update the actual transaction table (purchases/stock_issues)
         if (transaction.transaction_type === 'purchase') {
           // Update purchase_items

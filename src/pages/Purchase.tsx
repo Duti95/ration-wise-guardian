@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { purchaseSchema } from "@/lib/validations";
 
 interface Vendor {
   id: string;
@@ -226,10 +227,27 @@ export default function Purchase() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.billNo || !formData.vendorId || formData.items.some(item => !item.itemId || !item.quantity || !item.rate)) {
+    // Validate using Zod schema
+    try {
+      const validationData = {
+        bill_no: formData.billNo,
+        vendor_id: formData.vendorId,
+        purchase_date: formData.date,
+        items: formData.items.map(item => ({
+          item_id: item.itemId,
+          quantity: parseFloat(item.quantity) || 0,
+          mrp: item.mrp ? parseFloat(item.mrp) : undefined,
+          discount_value: parseFloat(item.discount) || 0,
+          rate_per_unit: parseFloat(item.rate) || 0,
+          damaged_quantity: parseFloat(item.damaged) || 0
+        }))
+      };
+
+      purchaseSchema.parse(validationData);
+    } catch (validationError: any) {
       toast({
-        title: "Error",
-        description: "Please fill in all required fields",
+        title: "Validation Error",
+        description: validationError.errors?.[0]?.message || "Please check all fields",
         variant: "destructive"
       });
       return;

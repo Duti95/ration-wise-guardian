@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { stockIssueSchema } from "@/lib/validations";
 
 interface Item {
   id: string;
@@ -142,10 +143,23 @@ export default function StockIssue() {
   const handleIssue = async (index: number) => {
     const item = issueData.items[index];
     
-    if (!item.name || !item.quantity || !item.price) {
+    // Validate using Zod schema
+    try {
+      const validationData = {
+        issue_date: issueData.date,
+        issue_type: issueData.issueType as "Master" | "Handloan",
+        items: [{
+          item_id: item.item_id || "",
+          quantity: parseFloat(item.quantity) || 0,
+          rate_per_unit: parseFloat(item.price) || 0
+        }]
+      };
+
+      stockIssueSchema.parse(validationData);
+    } catch (validationError: any) {
       toast({
         title: "Validation Error",
-        description: "Please fill all fields before issuing",
+        description: validationError.errors?.[0]?.message || "Please check all fields",
         variant: "destructive"
       });
       return;
