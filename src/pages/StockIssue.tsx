@@ -43,7 +43,7 @@ export default function StockIssue() {
   const [items, setItems] = useState<Item[]>([]);
   const [recentIssues, setRecentIssues] = useState<StockIssue[]>([]);
   const [issueData, setIssueData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toISOString().slice(0, 16),
     issueType: "Master",
     items: [{ name: "", quantity: "", unit: "kg", price: "" }] as IssueItem[]
   });
@@ -398,10 +398,10 @@ export default function StockIssue() {
                 {/* Date and Issue Type Selection */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="issueDate">Issue Date</Label>
+                    <Label htmlFor="issueDate">Issue Date & Time</Label>
                     <Input
                       id="issueDate"
-                      type="date"
+                      type="datetime-local"
                       value={issueData.date}
                       onChange={(e) => setIssueData(prev => ({ ...prev, date: e.target.value }))}
                       required
