@@ -54,7 +54,7 @@ export default function Purchase() {
   
   const [formData, setFormData] = useState({
     billNo: "",
-    date: new Date().toISOString().slice(0, 16),
+    date: new Date().toISOString().split('T')[0],
     vendorId: "",
     items: [{ 
       itemId: "", 
@@ -329,7 +329,7 @@ export default function Purchase() {
       // Reset form and refresh data
       setFormData({
         billNo: "",
-        date: new Date().toISOString().slice(0, 16),
+        date: new Date().toISOString().split('T')[0],
         vendorId: "",
         items: [{ 
           itemId: "", 
@@ -407,8 +407,8 @@ export default function Purchase() {
                     <Input
                       id="date"
                       type="datetime-local"
-                      value={formData.date}
-                      onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                      value={formData.date + 'T' + new Date().toTimeString().slice(0,5)}
+                      onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value.split('T')[0] }))}
                       required
                     />
                   </div>

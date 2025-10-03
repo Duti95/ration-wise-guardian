@@ -159,7 +159,7 @@ export default function Reports() {
       let allTransactions: any[] = [];
       
       if (filters.type === 'purchase') {
-        // Fetch purchase transactions - view reflects main tables
+        // Fetch purchase transactions (view automatically includes damaged_quantity and damaged_amount)
         const { data, error } = await supabase
           .from('purchase_transactions_report')
           .select('*')
@@ -169,7 +169,7 @@ export default function Reports() {
         allTransactions = data || [];
         
       } else if (filters.type === 'issue') {
-        // Fetch issue transactions - view reflects main tables
+        // Fetch issue transactions (view automatically includes vendor info)
         const { data: issueData, error: issueError } = await supabase
           .from('issue_transactions_report')
           .select('*')
@@ -179,7 +179,7 @@ export default function Reports() {
         allTransactions = issueData || [];
         
       } else {
-        // Fetch both transaction types - views reflect main tables only
+        // Fetch both purchase and issue transactions for "All" filter
         const [purchaseResult, issueResult] = await Promise.all([
           supabase
             .from('purchase_transactions_report')
@@ -192,7 +192,7 @@ export default function Reports() {
         if (purchaseResult.error) throw purchaseResult.error;
         if (issueResult.error) throw issueResult.error;
         
-        // Combine and sort by transaction date
+        // Combine both arrays and sort by date
         allTransactions = [...(purchaseResult.data || []), ...(issueResult.data || [])]
           .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
       }
