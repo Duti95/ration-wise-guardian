@@ -321,7 +321,7 @@ export type Database = {
       }
       transaction_metadata: {
         Row: {
-          created_at: string | null
+          created_at: string
           custom_balance_amount: number | null
           custom_balance_quantity: number | null
           dep_warden_signature: string | null
@@ -331,10 +331,10 @@ export type Database = {
           remarks: string | null
           transaction_id: string
           transaction_type: string
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           custom_balance_amount?: number | null
           custom_balance_quantity?: number | null
           dep_warden_signature?: string | null
@@ -344,10 +344,10 @@ export type Database = {
           remarks?: string | null
           transaction_id: string
           transaction_type: string
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           custom_balance_amount?: number | null
           custom_balance_quantity?: number | null
           dep_warden_signature?: string | null
@@ -357,31 +357,9 @@ export type Database = {
           remarks?: string | null
           transaction_id?: string
           transaction_type?: string
-          updated_at?: string | null
+          updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "transaction_metadata_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "issue_transactions_report"
-            referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "transaction_metadata_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "transaction_metadata_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "purchase_transactions_report"
-            referencedColumns: ["item_id"]
-          },
-        ]
+        Relationships: []
       }
       user_roles: {
         Row: {

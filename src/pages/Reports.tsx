@@ -94,19 +94,7 @@ export default function Reports() {
       )
       .subscribe();
 
-    const itemChannel = supabase
-      .channel('item-reports-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'item_transaction_report' },
-        () => {
-          console.log('Item report changed, refreshing...');
-          if (filters.type === 'all') {
-            fetchTransactions();
-          }
-        }
-      )
-      .subscribe();
+    // Note: item_transaction_report subscription removed as table doesn't exist
 
     const metadataChannel = supabase
       .channel('metadata-changes')
@@ -123,7 +111,6 @@ export default function Reports() {
     return () => {
       supabase.removeChannel(purchaseChannel);
       supabase.removeChannel(issueChannel);
-      supabase.removeChannel(itemChannel);
       supabase.removeChannel(metadataChannel);
     };
   }, []);
