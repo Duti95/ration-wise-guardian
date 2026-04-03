@@ -10,13 +10,13 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
       government_diet_menu: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
           items: Json
           meal_type: string
@@ -24,7 +24,7 @@ export type Database = {
           week_number: number | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           items: Json
           meal_type: string
@@ -32,7 +32,7 @@ export type Database = {
           week_number?: number | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           items?: Json
           meal_type?: string
@@ -43,7 +43,7 @@ export type Database = {
       }
       items: {
         Row: {
-          created_at: string
+          created_at: string | null
           current_stock: number | null
           danger_threshold: number | null
           id: string
@@ -52,10 +52,10 @@ export type Database = {
           name: string
           rate_per_unit: number | null
           unit: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           current_stock?: number | null
           danger_threshold?: number | null
           id?: string
@@ -64,10 +64,10 @@ export type Database = {
           name: string
           rate_per_unit?: number | null
           unit: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           current_stock?: number | null
           danger_threshold?: number | null
           id?: string
@@ -76,13 +76,13 @@ export type Database = {
           name?: string
           rate_per_unit?: number | null
           unit?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
       purchase_items: {
         Row: {
-          created_at: string
+          created_at: string | null
           damaged_quantity: number | null
           discount_type: string | null
           discount_value: number | null
@@ -95,7 +95,7 @@ export type Database = {
           total_price: number
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           damaged_quantity?: number | null
           discount_type?: string | null
           discount_value?: number | null
@@ -108,7 +108,7 @@ export type Database = {
           total_price: number
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           damaged_quantity?: number | null
           discount_type?: string | null
           discount_value?: number | null
@@ -161,29 +161,29 @@ export type Database = {
       purchases: {
         Row: {
           bill_no: string
-          created_at: string
+          created_at: string | null
           id: string
-          purchase_date: string
+          purchase_date: string | null
           total_amount: number | null
-          updated_at: string
+          updated_at: string | null
           vendor_id: string | null
         }
         Insert: {
           bill_no: string
-          created_at?: string
+          created_at?: string | null
           id?: string
-          purchase_date?: string
+          purchase_date?: string | null
           total_amount?: number | null
-          updated_at?: string
+          updated_at?: string | null
           vendor_id?: string | null
         }
         Update: {
           bill_no?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
-          purchase_date?: string
+          purchase_date?: string | null
           total_amount?: number | null
-          updated_at?: string
+          updated_at?: string | null
           vendor_id?: string | null
         }
         Relationships: [
@@ -198,7 +198,7 @@ export type Database = {
       }
       stock_issue_items: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
           issue_id: string | null
           item_id: string | null
@@ -207,7 +207,7 @@ export type Database = {
           total_price: number
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           issue_id?: string | null
           item_id?: string | null
@@ -216,7 +216,7 @@ export type Database = {
           total_price: number
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           issue_id?: string | null
           item_id?: string | null
@@ -264,28 +264,28 @@ export type Database = {
       }
       stock_issues: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
-          issue_date: string
+          issue_date: string | null
           issue_type: string | null
           total_value: number | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
-          issue_date?: string
+          issue_date?: string | null
           issue_type?: string | null
           total_value?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
-          issue_date?: string
+          issue_date?: string | null
           issue_type?: string | null
           total_value?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -293,35 +293,35 @@ export type Database = {
         Row: {
           assigned_amount: number | null
           category_name: string
-          created_at: string
+          created_at: string | null
           id: string
           is_active: boolean | null
           student_count: number | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           assigned_amount?: number | null
           category_name: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           is_active?: boolean | null
           student_count?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           assigned_amount?: number | null
           category_name?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           is_active?: boolean | null
           student_count?: number | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
       transaction_metadata: {
         Row: {
-          created_at: string
+          created_at: string | null
           custom_balance_amount: number | null
           custom_balance_quantity: number | null
           dep_warden_signature: string | null
@@ -331,10 +331,10 @@ export type Database = {
           remarks: string | null
           transaction_id: string
           transaction_type: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           custom_balance_amount?: number | null
           custom_balance_quantity?: number | null
           dep_warden_signature?: string | null
@@ -344,10 +344,10 @@ export type Database = {
           remarks?: string | null
           transaction_id: string
           transaction_type: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           custom_balance_amount?: number | null
           custom_balance_quantity?: number | null
           dep_warden_signature?: string | null
@@ -357,7 +357,7 @@ export type Database = {
           remarks?: string | null
           transaction_id?: string
           transaction_type?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -385,36 +385,36 @@ export type Database = {
       utensils: {
         Row: {
           capacity: string | null
-          created_at: string
+          created_at: string | null
           current_quantity: number | null
           damaged_quantity: number | null
           id: string
           name: string
           replacement_needed: number | null
           unit: string | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           capacity?: string | null
-          created_at?: string
+          created_at?: string | null
           current_quantity?: number | null
           damaged_quantity?: number | null
           id?: string
           name: string
           replacement_needed?: number | null
           unit?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           capacity?: string | null
-          created_at?: string
+          created_at?: string | null
           current_quantity?: number | null
           damaged_quantity?: number | null
           id?: string
           name?: string
           replacement_needed?: number | null
           unit?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -422,35 +422,35 @@ export type Database = {
         Row: {
           address: string | null
           contact_person: string | null
-          created_at: string
+          created_at: string | null
           email: string | null
           id: string
           is_active: boolean | null
           name: string
           phone: string | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           address?: string | null
           contact_person?: string | null
-          created_at?: string
+          created_at?: string | null
           email?: string | null
           id?: string
           is_active?: boolean | null
           name: string
           phone?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           address?: string | null
           contact_person?: string | null
-          created_at?: string
+          created_at?: string | null
           email?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           phone?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -510,6 +510,7 @@ export type Database = {
       }
     }
     Functions: {
+      has_any_role: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
